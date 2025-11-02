@@ -2,14 +2,34 @@
 include '../includes/db.php';
 include '../includes/header.php';
 
-$category_id = $_GET['id'] ?? 0;
+$category_id = null;
 
+// Check if "id" or "cat" is passed
+if (isset($_GET['id'])) {
+  $category_id = (int)$_GET['id'];
+} elseif (isset($_GET['cat'])) {
+  $slug = $_GET['cat'];
+  $sql = "SELECT category_id FROM categories WHERE slug = '$slug'";
+  $result = $conn->query($sql);
+  if ($result && $result->num_rows > 0) {
+    $category_id = $result->fetch_assoc()['category_id'];
+  }
+}
+
+if (!$category_id) {
+  echo "<p>Category not found.</p>";
+  include '../includes/footer.php';
+  exit;
+}
+
+// Fetch category name
 $sql = "SELECT name FROM categories WHERE category_id = $category_id";
 $cat_result = $conn->query($sql);
-$category = $cat_result && $cat_result->num_rows > 0 ? $cat_result->fetch_assoc()['name'] : 'Unknown';
+$category = $cat_result->fetch_assoc()['name'] ?? 'Unknown';
 
-echo "<h2>Products in $category</h2>";
+echo "<h2>$category</h2>";
 
+// Get all products in this category
 $sql = "SELECT * FROM products WHERE category_id = $category_id AND active = 1";
 $result = $conn->query($sql);
 
