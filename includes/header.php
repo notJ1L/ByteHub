@@ -14,11 +14,14 @@ if (session_status() === PHP_SESSION_NONE) session_start();
   <nav>
     <a href="category.php?cat=cpus">CPUs</a>
     <a href="category.php?cat=gpus">GPUs</a>
+    <a href="category.php?cat=motherboards">Motherboards</a>
+    <a href="category.php?cat=ram">RAM</a>
+    <a href="category.php?cat=peripherals">Peripherals</a>
     <a href="cart.php">Cart</a>
     <?php if(isset($_SESSION['user_id'])): ?>
-      <a href="logout.php">Logout</a>
+      <a href="../login/logout.php">Logout</a>
     <?php else: ?>
-      <a href="login.php">Login</a>
+      <a href="../login/login.php">Login</a>
     <?php endif; ?>
   </nav>
 </header>
