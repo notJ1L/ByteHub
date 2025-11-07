@@ -10,6 +10,10 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 </head>
 <body>
 <header>
+  <form action="search.php" method="GET" style="display:inline;">
+  <input type="text" name="q" placeholder="Search..." required>
+  <button type="submit">Search</button>
+</form>
   <h1><a href="index.php">ByteHub</a></h1>
   <nav>
     <a href="category.php?cat=cpus">CPUs</a>
