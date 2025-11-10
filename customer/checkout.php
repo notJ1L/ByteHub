@@ -1,47 +1,65 @@
 <?php
 session_start();
 include '../includes/db.php';
+include '../includes/functions.php';
 include '../includes/header.php';
 
+/* --- Require login --- */
 if (!isset($_SESSION['user_id'])) {
+  $_SESSION['redirect_after_login'] = 'checkout.php';
   header('Location: login.php');
   exit;
 }
 
+/* --- Check for empty cart --- */
 if (empty($_SESSION['cart'])) {
   echo "<p>Your cart is empty. <a href='index.php'>Go shopping</a></p>";
   include '../includes/footer.php';
   exit;
 }
 
+/* --- When the form is submitted --- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $user_id = 1; // Replace with $_SESSION['user_id'] if login system is active
+  $user_id = (int)$_SESSION['user_id'];               // use logged-in user ID
   $payment_method = $_POST['payment_method'];
   $order_code = 'ORDER-' . rand(1000, 9999);
 
-  $ids = implode(',', array_keys($_SESSION['cart']));
+  $ids = implode(',', array_map('intval', array_keys($_SESSION['cart'])));
   $sql = "SELECT * FROM products WHERE product_id IN ($ids)";
   $result = $conn->query($sql);
+
+  if (!$result) {
+    die("Query failed: " . $conn->error);
+  }
 
   $subtotal = 0;
   while ($row = $result->fetch_assoc()) {
     $subtotal += $row['price'] * $_SESSION['cart'][$row['product_id']];
   }
-  $tax = $subtotal * 0.12;
-  $total = $subtotal + $tax;
+  $tax = round($subtotal * 0.12, 2);
+  $total = round($subtotal + $tax, 2);
 
-  $conn->query("INSERT INTO orders (user_id, order_code, payment_method, subtotal, tax, total, status) 
-                VALUES ($user_id, '$order_code', '$payment_method', $subtotal, $tax, $total, 'Pending')");
-  $order_id = $conn->insert_id;
+  /* --- Insert order --- */
+  $stmt = $conn->prepare("INSERT INTO orders (user_id, order_code, payment_method, subtotal, tax, total, status) 
+                          VALUES (?, ?, ?, ?, ?, ?, 'Pending')");
+  $stmt->bind_param('issddd', $user_id, $order_code, $payment_method, $subtotal, $tax, $total);
+  $stmt->execute();
+  $order_id = $stmt->insert_id;
+  $stmt->close();
 
+  /* --- Insert order items and update stock --- */
   $result->data_seek(0);
   while ($row = $result->fetch_assoc()) {
-    $pid = $row['product_id'];
-    $qty = $_SESSION['cart'][$pid];
+    $pid = (int)$row['product_id'];
+    $qty = (int)$_SESSION['cart'][$pid];
     $line_total = $row['price'] * $qty;
 
-    $conn->query("INSERT INTO order_items (name_snapshot, unit_price_snapshot, quantity, line_total, order_id, product_id)
-                  VALUES ('{$row['product_name']}', {$row['price']}, $qty, $line_total, $order_id, $pid)");
+    $stmt = $conn->prepare("INSERT INTO order_items 
+      (name_snapshot, unit_price_snapshot, quantity, line_total, order_id, product_id)
+      VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param('sdddid', $row['product_name'], $row['price'], $qty, $line_total, $order_id, $pid);
+    $stmt->execute();
+    $stmt->close();
 
     $conn->query("UPDATE products SET stock = stock - $qty WHERE product_id = $pid");
   }

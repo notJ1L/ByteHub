@@ -1,7 +1,13 @@
 <?php
 session_start();
 include '../includes/db.php';
+include '../includes/functions.php';
 include '../includes/header.php';
+
+if (!isset($_SESSION['user_id'])) {
+  header('Location: login.php');
+  exit;
+}
 
 if (!isset($_SESSION['cart'])) $_SESSION['cart'] = [];
 
@@ -36,6 +42,15 @@ if (empty($_SESSION['cart'])) {
   }
   echo "<tr><td colspan='3'><strong>Total</strong></td><td>$" . number_format($total, 2) . "</td></tr></table>";
 }
+
+if (!empty($_SESSION['cart'])): ?>
+  <div style="margin-top: 20px;">
+    <a href="checkout.php" class="btn" 
+       style="background-color:#004d26; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">
+       Proceed to Checkout
+    </a>
+  </div>
+<?php endif;
 
 include '../includes/footer.php';
 ?>

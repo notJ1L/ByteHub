@@ -1,15 +1,20 @@
-<?php 
-include '../includes/db.php'; 
-include '../includes/header.php';
-?>
+<?php
+if (session_status() === PHP_SESSION_NONE) session_start();
 
+function redirect(string $path) {
+    header("Location: $path");
+    exit;
+}
 
+function is_logged_in(): bool {
+    return isset($_SESSION['user_id']);
+}
 
-
-
-
-
-
-
-
-<?php include '../includes/footer.php'; ?>
+function after_login_redirect_path(): string {
+    if (!empty($_SESSION['redirect_after_login'])) {
+        $to = $_SESSION['redirect_after_login'];
+        unset($_SESSION['redirect_after_login']);
+        return $to;
+    }
+    return '../customer/index.php';
+}
