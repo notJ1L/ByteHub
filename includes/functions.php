@@ -18,3 +18,13 @@ function after_login_redirect_path(): string {
     }
     return '../customer/index.php';
 }
+
+function isAdmin() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    return isset($_SESSION['admin_id']);
+}
+
+?>
