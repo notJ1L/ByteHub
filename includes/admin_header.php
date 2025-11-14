@@ -59,6 +59,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
       <a href="/bytehub/admin/dashboard.php">Dashboard</a>
       <a href="/bytehub/admin/products/products.php">Products</a>
       <a href="/bytehub/admin/orders.php">Orders</a>
+      <a href="/bytehub/admin/users/users.php">Users</a>
       <a href="/bytehub/admin/categories/categories.php">Categories</a>
       <a href="/bytehub/admin/brands/brands.php">Brands</a>
       <a href="/bytehub/admin/expenses/expenses.php">Expenses</a>

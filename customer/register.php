@@ -8,10 +8,12 @@ $email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
-    $email = trim($_POST['email'] ?? '');
+    $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirm  = $_POST['confirm'] ?? '';
+    $photoName = null;
 
+    // Basic validation
     if ($username === '' || $email === '' || $password === '' || $confirm === '') {
         $errors[] = 'All fields are required.';
     }
@@ -22,6 +24,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Passwords do not match.';
     }
 
+    // Validate uploaded photo
+    if (!empty($_FILES['photo']['name'])) {
+        $allowed = ['jpg','jpeg','png','gif','webp'];
+        $ext = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
+        
+        if (!in_array($ext, $allowed)) {
+            $errors[] = "Invalid photo format. Allowed: JPG, PNG, GIF, WEBP.";
+        }
+    }
+
+    // Check if email exists
     if (!$errors) {
         $stmt = $conn->prepare("SELECT user_id FROM users WHERE email=? LIMIT 1");
         $stmt->bind_param('s', $email);
@@ -34,14 +47,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$errors) {
+        // Handle photo upload
+        if (!empty($_FILES['photo']['name'])) {
+            $photoName = time() . '_' . $_FILES['photo']['name'];
+            $uploadPath = "../uploads/users/" . $photoName;
+            move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath);
+        }
+
         $hash = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $conn->prepare("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)");
-        $stmt->bind_param('sss', $username, $email, $hash);
+
+        // INSERT with new columns: photo, active, role
+        $stmt = $conn->prepare("
+            INSERT INTO users (username, email, password_hash, photo, active, role) 
+            VALUES (?, ?, ?, ?, 1, 'user')
+        ");
+
+        $stmt->bind_param('ssss', $username, $email, $hash, $photoName);
+
         if ($stmt->execute()) {
             redirect('login.php');
         } else {
             $errors[] = 'Registration failed.';
         }
+
         $stmt->close();
     }
 }
@@ -49,11 +77,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php include '../includes/header.php'; ?>
 
 <h2>Create Account</h2>
+
 <?php if ($errors): ?>
   <div class="error"><?php echo implode('<br>', array_map('htmlspecialchars', $errors)); ?></div>
 <?php endif; ?>
 
-<form method="post">
+<form method="post" enctype="multipart/form-data">
   <label>Username</label>
   <input type="text" name="username" value="<?php echo htmlspecialchars($username); ?>" required>
 
@@ -65,6 +94,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <label>Confirm Password</label>
   <input type="password" name="confirm" required>
+
+  <label>Profile Photo</label>
+  <input type="file" name="photo">
 
   <button type="submit" class="btn">Register</button>
   <p>Already have an account? <a href="login.php">Login</a></p>

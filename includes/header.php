@@ -18,6 +18,8 @@ if (session_status() === PHP_SESSION_NONE) session_start();
     <a href="category.php?cat=ram">RAM</a>
     <a href="category.php?cat=peripherals">Peripherals</a>
     <a href="cart.php">Cart</a>
+    <a href="myorders.php">My Orders</a>
+    <a href="profile.php">Profile</a>
      <?php if(isset($_SESSION['user_id'])): ?>
         <a href="logout.php">Logout</a>
     <?php else: ?>

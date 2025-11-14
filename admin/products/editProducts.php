@@ -1,130 +1,150 @@
 <?php
+session_start();
 include '../../includes/db.php';
-include '../../includes/functions.php';
 include '../../includes/admin_header.php';
+include '../../includes/functions.php';
 
-$id = $_GET['id'];
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: index.php');
+    exit;
+}
 
-// Fetch product
-$sql = "SELECT * FROM products WHERE product_id = $id LIMIT 1";
-$product = $conn->query($sql)->fetch_assoc();
+$product_id = (int)$_GET['id'];
 
-// Fetch categories
-$catQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
+$res = $conn->query("SELECT * FROM products WHERE product_id = $product_id LIMIT 1");
+$product = $res->fetch_assoc();
 
-// Fetch brands
-$brandQuery = $conn->query("SELECT * FROM brands ORDER BY name ASC");
+if (!$product) {
+    echo "Product not found.";
+    exit;
+}
 
-// Handle update
-if (isset($_POST['update'])) {
-    $name = $_POST['product_name'];
-    $model = $_POST['model'];
-    $category = $_POST['category_id'];
-    $brand = $_POST['brand_id'];
-    $price = $_POST['price'];
-    $stock = $_POST['stock'];
+$cats = $conn->query("SELECT * FROM categories WHERE active=1");
+$brands = $conn->query("SELECT * FROM brands WHERE active=1");
 
-    $featured = $_POST['featured'];
-    $new_arrival = $_POST['new_arrival'];
-    $active = $_POST['active'];
+$moreImages = $conn->query("SELECT * FROM product_images WHERE product_id = $product_id");
 
-    $imageName = $product['image'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // If user chose new image
+    $name = trim($_POST['product_name']);
+    $model = trim($_POST['model']);
+    $price = (float)$_POST['price'];
+    $stock = (int)$_POST['stock'];
+    $category_id = (int)$_POST['category_id'];
+    $brand_id = (int)$_POST['brand_id'];
+    $featured = isset($_POST['featured']) ? 1 : 0;
+    $new_arrival = isset($_POST['new_arrival']) ? 1 : 0;
+    $active = isset($_POST['active']) ? 1 : 0;
+
+    $conn->query("
+        UPDATE products SET
+            product_name = '$name',
+            model = '$model',
+            price = $price,
+            stock = $stock,
+            featured = $featured,
+            new_arrival = $new_arrival,
+            active = $active,
+            category_id = $category_id,
+            brand_id = $brand_id
+        WHERE product_id = $product_id
+    ");
+
     if (!empty($_FILES['image']['name'])) {
-        $imageName = time() . "_" . $_FILES['image']['name'];
-        move_uploaded_file($_FILES['image']['tmp_name'], "../uploads/" . $imageName);
+        $mainImage = time() . '_' . $_FILES['image']['name'];
+        $target = "../../uploads/products/" . $mainImage;
+
+        move_uploaded_file($_FILES['image']['tmp_name'], $target);
+
+        $conn->query("UPDATE products SET image='$mainImage' WHERE product_id=$product_id");
     }
 
-    $update = "UPDATE products SET
-                product_name='$name',
-                model='$model',
-                category_id='$category',
-                brand_id='$brand',
-                price='$price',
-                stock='$stock',
-                featured='$featured',
-                new_arrival='$new_arrival',
-                active='$active',
-                image='$imageName'
-                WHERE product_id = $id";
+    if (!empty($_FILES['images']['name'][0])) {
 
-    if ($conn->query($update)) {
-        header("Location: products.php?updated=1");
-        exit();
-    } else {
-        $error = "Update failed!";
+        foreach ($_FILES['images']['name'] as $key => $filename) {
+
+            $imgName = time() . '_' . $filename;
+            $uploadPath = "../../uploads/products/" . $imgName;
+
+            if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $uploadPath)) {
+
+                $conn->query("
+                    INSERT INTO product_images (product_id, filename)
+                    VALUES ($product_id, '$imgName')
+                ");
+            }
+        }
     }
+
+    header("Location: products.php");
+    exit;
 }
 ?>
 
-<div class="container mt-4">
-    <h2>Edit Product</h2>
+<h2>Edit Product</h2>
 
-    <?php if(isset($error)){ echo "<div class='alert alert-danger'>$error</div>"; } ?>
+<form method="POST" enctype="multipart/form-data">
 
-    <form method="post" enctype="multipart/form-data">
+    <label>Product Name:</label><br>
+    <input type="text" name="product_name" value="<?= $product['product_name'] ?>" required><br><br>
 
-        <label>Product Name:</label>
-        <input type="text" name="product_name" class="form-control" value="<?php echo $product['product_name']; ?>" required>
+    <label>Model:</label><br>
+    <input type="text" name="model" value="<?= $product['model'] ?>" required><br><br>
 
-        <label class="mt-3">Model:</label>
-        <input type="text" name="model" class="form-control" value="<?php echo $product['model']; ?>" required>
+    <label>Price:</label><br>
+    <input type="number" name="price" step="0.01" value="<?= $product['price'] ?>" required><br><br>
 
-        <label class="mt-3">Category:</label>
-        <select name="category_id" class="form-control">
-            <?php while($cat = $catQuery->fetch_assoc()): ?>
-                <option value="<?php echo $cat['category_id']; ?>"
-                    <?php echo ($product['category_id'] == $cat['category_id']) ? 'selected' : ''; ?>>
-                    <?php echo $cat['name']; ?>
-                </option>
-            <?php endwhile; ?>
-        </select>
+    <label>Stock:</label><br>
+    <input type="number" name="stock" value="<?= $product['stock'] ?>" required><br><br>
 
-        <label class="mt-3">Brand:</label>
-        <select name="brand_id" class="form-control">
-            <?php while($brand = $brandQuery->fetch_assoc()): ?>
-                <option value="<?php echo $brand['brand_id']; ?>"
-                    <?php echo ($product['brand_id'] == $brand['brand_id']) ? 'selected' : ''; ?>>
-                    <?php echo $brand['name']; ?>
-                </option>
-            <?php endwhile; ?>
-        </select>
+    <label>Category:</label><br>
+    <select name="category_id">
+        <?php while ($c = $cats->fetch_assoc()): ?>
+            <option value="<?= $c['category_id'] ?>" 
+                <?= $product['category_id'] == $c['category_id'] ? 'selected' : '' ?>>
+                <?= $c['name'] ?>
+            </option>
+        <?php endwhile; ?>
+    </select><br><br>
 
-        <label class="mt-3">Price:</label>
-        <input type="number" step="0.01" name="price" class="form-control" value="<?php echo $product['price']; ?>" required>
+    <label>Brand:</label><br>
+    <select name="brand_id">
+        <?php while ($b = $brands->fetch_assoc()): ?>
+            <option value="<?= $b['brand_id'] ?>"
+                <?= $product['brand_id'] == $b['brand_id'] ? 'selected' : '' ?>>
+                <?= $b['name'] ?>
+            </option>
+        <?php endwhile; ?>
+    </select><br><br>
 
-        <label class="mt-3">Stock:</label>
-        <input type="number" name="stock" class="form-control" value="<?php echo $product['stock']; ?>" required>
+    <label><input type="checkbox" name="featured" <?= $product['featured'] ? 'checked' : '' ?>> Featured</label><br>
+    <label><input type="checkbox" name="new_arrival" <?= $product['new_arrival'] ? 'checked' : '' ?>> New Arrival</label><br><br>
+    <label><input type="checkbox" name="active" <?= $product['active'] ? 'checked' : '' ?>> Active</label><br><br>
 
-        <label class="mt-3">Featured:</label>
-        <select name="featured" class="form-control">
-            <option value="1" <?php echo $product['featured'] ? 'selected' : ''; ?>>Yes</option>
-            <option value="0" <?php echo !$product['featured'] ? 'selected' : ''; ?>>No</option>
-        </select>
+    <label>Main Image:</label><br>
+    <?php if ($product['image']): ?>
+        <img src="../../uploads/products/<?= $product['image'] ?>" width="120"><br>
+    <?php endif; ?>
+    <input type="file" name="image"><br><br>
 
-        <label class="mt-3">New Arrival:</label>
-        <select name="new_arrival" class="form-control">
-            <option value="1" <?php echo $product['new_arrival'] ? 'selected' : ''; ?>>Yes</option>
-            <option value="0" <?php echo !$product['new_arrival'] ? 'selected' : ''; ?>>No</option>
-        </select>
+    <label>Additional Images:</label><br>
+    <input type="file" name="images[]" multiple><br><br>
 
-        <label class="mt-3">Active:</label>
-        <select name="active" class="form-control">
-            <option value="1" <?php echo $product['active'] ? 'selected' : ''; ?>>Active</option>
-            <option value="0" <?php echo !$product['active'] ? 'selected' : ''; ?>>Inactive</option>
-        </select>
+    <h4>Existing Additional Images</h4>
+    <?php while ($img = $moreImages->fetch_assoc()): ?>
+        <div style="margin-bottom:10px;">
+            <img src="../../uploads/products/<?= $img['filename'] ?>" width="120" style="border:1px solid #ccc;">
+            <a href="deleteImage.php?id=<?= $img['image_id'] ?>&product=<?= $product_id ?>" 
+               class="btn btn-danger btn-sm"
+               onclick="return confirm('Delete this image?');">
+               Delete
+            </a>
+        </div>
+    <?php endwhile; ?>
 
-        <label class="mt-3">Current Image:</label><br>
-        <img src="../uploads/<?php echo $product['image']; ?>" width="120"><br>
+    <br><br>
 
-        <label class="mt-3">Upload New Image:</label>
-        <input type="file" name="image" class="form-control">
-
-        <button name="update" class="btn btn-primary mt-4">Update Product</button>
-        <a href="products.php" class="btn btn-secondary mt-4">Cancel</a>
-    </form>
-
-</div>
+    <button class="btn btn-primary">Save Changes</button>
+</form>
 
 <?php include '../../includes/footer.php'; ?>
