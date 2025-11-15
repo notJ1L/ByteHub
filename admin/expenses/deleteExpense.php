@@ -3,14 +3,12 @@ include '../includes/db.php';
 include '../includes/functions.php';
 
 if (!isAdmin()) {
-    header("Location: ../customer/index.php");
-    exit();
+    redirect('../customer/index.php');
 }
 
 $id = $_GET['id'];
 
 $conn->query("DELETE FROM expenses WHERE expenses_id = $id");
 
-header("Location: expenses.php?deleted=1");
-exit();
+redirect("expenses.php?deleted=1");
 ?>

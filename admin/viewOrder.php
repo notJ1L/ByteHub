@@ -1,12 +1,12 @@
 <?php
 include '../includes/db.php';
 include '../includes/functions.php';
-include '../includes/admin_header.php';
 
 if (!isAdmin()) {
-    header("Location: ../customer/index.php");
-    exit();
+    redirect('../customer/index.php');
 }
+
+include '../includes/admin_header.php';
 
 $id = $_GET['id'];
 
@@ -62,7 +62,7 @@ WHERE order_id = $id
 
     <h3>Total: $<?php echo number_format($order['total'], 2); ?></h3>
 
-    <a href="orders.php" class="btn btn-secondary mt-3">Back to Orders</a>
+    <a href="orders.php" class="action-btn btn-edit mt-3"><i class="fas fa-arrow-left"></i>Back to Orders</a>
 </div>
 
-<?php include '../includes/footer.php'; ?>
+<?php include 'footer.php'; ?>

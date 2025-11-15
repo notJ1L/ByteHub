@@ -3,12 +3,21 @@ include '../includes/db.php';
 include '../includes/functions.php';
 include '../includes/header.php';
 
-if (!isLoggedIn()) {
+if (!is_logged_in()) {
     redirect('login.php');
 }
 
 $product_id = $_GET['product_id'];
 $user_id = $_SESSION['user_id'];
+
+// Check if user already has a review for this product
+$existing_review = $conn->prepare("SELECT review_id FROM reviews WHERE product_id = ? AND user_id = ?");
+$existing_review->bind_param("ii", $product_id, $user_id);
+$existing_review->execute();
+$existing_result = $existing_review->get_result();
+if ($existing_result->num_rows > 0) {
+    redirect('product.php?id=' . $product_id);
+}
 
 // Check if user has purchased this product before
 $stmt = $conn->prepare("

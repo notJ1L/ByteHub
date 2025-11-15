@@ -13,6 +13,5 @@ if (file_exists("../uploads/" . $image)) {
     unlink("../uploads/" . $image);
 }
 
-header("Location: products.php?deleted=1");
-exit();
+redirect("products.php?deleted=1");
 ?>

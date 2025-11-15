@@ -1,14 +1,12 @@
 <?php
 include '../../includes/db.php';
 include '../../includes/functions.php';
-include '../../includes/admin_header.php';
 
 if (!isAdmin()) {
-    header("Location: ../customer/index.php");
-    exit();
+    redirect('../customer/index.php');
 }
 
-$id = $_GET['id'];
+$id = $_GET['id'] ?? 0;
 
 $brandQuery = $conn->query("SELECT * FROM brands WHERE brand_id = $id LIMIT 1");
 $brand = $brandQuery->fetch_assoc();
@@ -22,47 +20,123 @@ if (isset($_POST['update'])) {
     $slug = $_POST['slug'];
     $active = $_POST['active'];
 
-    $sql = "UPDATE brands SET
-            name='$name',
-            slug='$slug',
-            active='$active'
-            WHERE brand_id = $id";
+    $stmt = $conn->prepare("UPDATE brands SET name=?, slug=?, active=? WHERE brand_id = ?");
+    $stmt->bind_param("ssii", $name, $slug, $active, $id);
 
-    if ($conn->query($sql)) {
-        header("Location: brands.php?updated=1");
-        exit();
+    if ($stmt->execute()) {
+        redirect("brands.php?updated=1");
     } else {
         $error = "Failed to update brand!";
     }
+    $stmt->close();
 }
+
+include '../../includes/admin_header.php';
 ?>
 
-<div class="container mt-4">
-    <h2>Edit Brand</h2>
+<div class="admin-content">
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="page-header mb-4">
+            <div>
+                <h2 class="page-title">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Brand
+                </h2>
+                <p class="text-muted mb-0">Update brand information</p>
+            </div>
+            <a href="brands.php" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Brands
+            </a>
+        </div>
 
-    <?php if(isset($error)): ?>
-        <div class="alert alert-danger"><?php echo $error; ?></div>
-    <?php endif; ?>
+        <?php if(isset($error)): ?>
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
 
-    <form method="post">
-        <label>Name:</label>
-        <input type="text" name="name" class="form-control"
-               value="<?php echo $brand['name']; ?>" required>
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control"
+                                   value="<?php echo htmlspecialchars($brand['name']); ?>" required>
+                        </div>
 
-        <label class="mt-3">Slug:</label>
-        <input type="text" name="slug" class="form-control"
-               value="<?php echo $brand['slug']; ?>" required>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Slug <span class="text-danger">*</span></label>
+                            <input type="text" name="slug" class="form-control"
+                                   value="<?php echo htmlspecialchars($brand['slug']); ?>" required>
+                            <small class="text-muted">URL-friendly identifier (e.g., "apple", "samsung")</small>
+                        </div>
 
-        <label class="mt-3">Active:</label>
-        <select name="active" class="form-control">
-            <option value="1" <?php echo $brand['active'] ? 'selected' : ''; ?>>Yes</option>
-            <option value="0" <?php echo !$brand['active'] ? 'selected' : ''; ?>>No</option>
-        </select>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+                            <select name="active" class="form-select" required>
+                                <option value="1" <?php echo $brand['active'] ? 'selected' : ''; ?>>Active</option>
+                                <option value="0" <?php echo !$brand['active'] ? 'selected' : ''; ?>>Inactive</option>
+                            </select>
+                        </div>
 
-        <button name="update" class="btn btn-primary mt-4">Update Brand</button>
-        <a href="brands.php" class="btn btn-secondary mt-4">Cancel</a>
-    </form>
-
+                        <div class="col-12">
+                            <hr class="my-3">
+                            <div class="d-flex gap-2">
+                                <button name="update" type="submit" class="btn btn-primary-green">
+                                    <i class="bi bi-check-circle me-2"></i>Update Brand
+                                </button>
+                                <a href="brands.php" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<style>
+.form-label {
+    margin-bottom: 0.5rem;
+    color: #495057;
+}
+
+.form-control,
+.form-select {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 0.625rem 1rem;
+    color: #212529 !important;
+    background-color: #fff !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(0, 77, 38, 0.1);
+    outline: none;
+    color: #212529 !important;
+    background-color: #fff !important;
+}
+
+.btn-primary-green {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+    color: white;
+    font-weight: 600;
+}
+
+.btn-primary-green:hover {
+    background-color: var(--secondary-green);
+    border-color: var(--secondary-green);
+    color: white;
+}
+</style>
+
+<?php include '../footer.php'; ?>

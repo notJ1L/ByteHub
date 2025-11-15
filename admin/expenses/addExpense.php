@@ -1,11 +1,9 @@
 <?php
 include '../../includes/db.php';
-include '../../includes/admin_header.php';
 include '../../includes/functions.php';
 
 if (!isAdmin()) {
-    header("Location: ../customer/index.php");
-    exit();
+    redirect('../customer/index.php');
 }
 
 if (isset($_POST['save'])) {
@@ -15,42 +13,146 @@ if (isset($_POST['save'])) {
     $notes = $_POST['notes'];
     $created_at = date("Y-m-d H:i:s");
 
-    $sql = "INSERT INTO expenses (title, amount, category, notes, created_at)
-            VALUES ('$title', '$amount', '$category', '$notes', '$created_at')";
+    $stmt = $conn->prepare("INSERT INTO expenses (title, amount, category, notes, created_at) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sdsss", $title, $amount, $category, $notes, $created_at);
 
-    if ($conn->query($sql)) {
-        header("Location: expenses.php?added=1");
-        exit();
+    if ($stmt->execute()) {
+        redirect("expenses.php?added=1");
     } else {
         $error = "Failed to add expense!";
     }
+    $stmt->close();
 }
+
+include '../../includes/admin_header.php';
 ?>
 
-<div class="container mt-4">
-    <h2>Add Expense</h2>
+<div class="admin-content">
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="page-header mb-4">
+            <div>
+                <h2 class="page-title">
+                    <i class="bi bi-plus-circle me-2"></i>Add New Expense
+                </h2>
+                <p class="text-muted mb-0">Record a new expense</p>
+            </div>
+            <a href="expenses.php" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Expenses
+            </a>
+        </div>
 
-    <?php if(isset($error)): ?>
-        <div class="alert alert-danger"><?php echo $error; ?></div>
-    <?php endif; ?>
+        <?php if(isset($error)): ?>
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
 
-    <form method="post">
-        <label>Title:</label>
-        <input type="text" name="title" class="form-control" required>
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control" required
+                                   placeholder="e.g., Office Supplies, Utilities">
+                        </div>
 
-        <label class="mt-3">Amount:</label>
-        <input type="number" step="0.01" name="amount" class="form-control" required>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Amount <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input type="number" step="0.01" name="amount" class="form-control" required
+                                       placeholder="0.00">
+                            </div>
+                        </div>
 
-        <label class="mt-3">Category:</label>
-        <input type="text" name="category" class="form-control">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Category</label>
+                            <input type="text" name="category" class="form-control"
+                                   placeholder="e.g., Office Supplies, Utilities, Marketing">
+                        </div>
 
-        <label class="mt-3">Notes:</label>
-        <textarea name="notes" class="form-control"></textarea>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Date</label>
+                            <input type="text" class="form-control" 
+                                   value="<?php echo date('F j, Y'); ?>" 
+                                   disabled>
+                            <small class="text-muted">Current date will be used</small>
+                        </div>
 
-        <button name="save" class="btn btn-success mt-4">Save Expense</button>
-        <a href="expenses.php" class="btn btn-secondary mt-4">Cancel</a>
-    </form>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notes</label>
+                            <textarea name="notes" class="form-control" rows="4"
+                                      placeholder="Additional notes about this expense..."></textarea>
+                        </div>
 
+                        <div class="col-12">
+                            <hr class="my-3">
+                            <div class="d-flex gap-2">
+                                <button name="save" type="submit" class="btn btn-primary-green">
+                                    <i class="bi bi-check-circle me-2"></i>Save Expense
+                                </button>
+                                <a href="expenses.php" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<style>
+.form-label {
+    margin-bottom: 0.5rem;
+    color: #495057;
+}
+
+.form-control,
+.form-select {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 0.625rem 1rem;
+    color: #212529 !important;
+    background-color: #fff !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(0, 77, 38, 0.1);
+    outline: none;
+    color: #212529 !important;
+    background-color: #fff !important;
+}
+
+.form-control::placeholder {
+    color: #6c757d !important;
+}
+
+.form-control:disabled {
+    background-color: #e9ecef !important;
+    color: #6c757d !important;
+}
+
+.btn-primary-green {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+    color: white;
+    font-weight: 600;
+}
+
+.btn-primary-green:hover {
+    background-color: var(--secondary-green);
+    border-color: var(--secondary-green);
+    color: white;
+}
+</style>
+
+<?php include '../footer.php'; ?>

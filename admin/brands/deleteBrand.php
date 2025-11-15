@@ -3,8 +3,7 @@ include '../includes/db.php';
 include '../includes/functions.php';
 
 if (!isAdmin()) {
-    header("Location: ../customer/index.php");
-    exit();
+    redirect('../customer/index.php');
 }
 
 $id = $_GET['id'];
@@ -19,6 +18,5 @@ if ($count > 0) {
 
 $conn->query("DELETE FROM brands WHERE brand_id = $id");
 
-header("Location: brands.php?deleted=1");
-exit();
+redirect("brands.php?deleted=1");
 ?>

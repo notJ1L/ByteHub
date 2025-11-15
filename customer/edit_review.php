@@ -3,7 +3,7 @@ include '../includes/db.php';
 include '../includes/functions.php';
 include '../includes/header.php';
 
-if (!isLoggedIn()) {
+if (!is_logged_in()) {
     redirect('login.php');
 }
 

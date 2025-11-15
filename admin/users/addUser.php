@@ -74,4 +74,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <button class="btn btn-success mt-3">Add User</button>
 </form>
 
-<?php include '../../includes/footer.php'; ?>
+<?php include '../footer.php'; ?>
