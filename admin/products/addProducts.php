@@ -9,6 +9,8 @@ if (!isset($_SESSION['admin_id'])) {
   exit;
 }
 
+$errors = [];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   $name = trim($_POST['product_name']);
@@ -19,55 +21,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $brand_id = (int)$_POST['brand_id'];
   $featured = isset($_POST['featured']) ? 1 : 0;
   $new_arrival = isset($_POST['new_arrival']) ? 1 : 0;
-  $description = $conn->real_escape_string($_POST['description']);
-  $specs = $conn->real_escape_string($_POST['specifications']);
+  $description = $_POST['description'];
+  $specs = $_POST['specifications'];
 
-  $conn->query("
-    INSERT INTO products 
-    (product_name, model, price, stock, image, featured, new_arrival, active, category_id, brand_id, description, specifications)
-    VALUES 
-    ('$name', '$model', $price, $stock, '', $featured, $new_arrival, 1, $category_id, $brand_id, '$description', '$specs')
-  ");
+  if (empty($name)) $errors[] = 'Product name is required.';
+  if (empty($model)) $errors[] = 'Model is required.';
+  if (empty($price)) $errors[] = 'Price is required.';
+  if (empty($stock)) $errors[] = 'Stock is required.';
 
+  if (empty($errors)) {
+    $stmt = $conn->prepare("
+      INSERT INTO products 
+      (product_name, model, price, stock, image, featured, new_arrival, active, category_id, brand_id, description, specifications)
+      VALUES 
+      (?, ?, ?, ?, '', ?, ?, 1, ?, ?, ?, ?)
+    ");
+    $stmt->bind_param("ssdiisssss", $name, $model, $price, $stock, $featured, $new_arrival, $category_id, $brand_id, $description, $specs);
+    $stmt->execute();
 
-  $product_id = $conn->insert_id;
+    $product_id = $conn->insert_id;
 
-  // ----------------------------------
-  // MAIN IMAGE UPLOAD
-  // ----------------------------------
-  if (!empty($_FILES['image']['name'])) {
-      $mainImage = time() . '_' . $_FILES['image']['name'];
-      $target = "../../uploads/products/" . $mainImage;
+    // MAIN IMAGE UPLOAD
+    if (!empty($_FILES['image']['name'])) {
+        $mainImage = time() . '_' . $_FILES['image']['name'];
+        $target = "../../uploads/products/" . $mainImage;
 
-      move_uploaded_file($_FILES['image']['tmp_name'], $target);
+        move_uploaded_file($_FILES['image']['tmp_name'], $target);
 
-      // update products table main image
-      $conn->query("UPDATE products SET image='$mainImage' WHERE product_id=$product_id");
-  }
-
-  // ----------------------------------
-  // MULTIPLE IMAGES UPLOAD
-  // ----------------------------------
-  if (!empty($_FILES['images']['name'][0])) {
-
-    foreach ($_FILES['images']['name'] as $key => $filename) {
-
-        $imgName = time() . '_' . $filename;
-        $uploadPath = "../../uploads/products/" . $imgName;
-
-        if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $uploadPath)) {
-
-            // save to product_images table
-            $conn->query("
-              INSERT INTO product_images (product_id, filename)
-              VALUES ($product_id, '$imgName')
-            ");
-        }
+        $stmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
+        $stmt->bind_param("si", $mainImage, $product_id);
+        $stmt->execute();
     }
-  }
 
-  header('Location: products.php');
-  exit;
+    // MULTIPLE IMAGES UPLOAD
+    if (!empty($_FILES['images']['name'][0])) {
+      foreach ($_FILES['images']['name'] as $key => $filename) {
+          $imgName = time() . '_' . $filename;
+          $uploadPath = "../../uploads/products/" . $imgName;
+
+          if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $uploadPath)) {
+              $stmt = $conn->prepare("INSERT INTO product_images (product_id, filename) VALUES (?, ?)");
+              $stmt->bind_param("is", $product_id, $imgName);
+              $stmt->execute();
+          }
+      }
+    }
+
+    header('Location: products.php');
+    exit;
+  }
 }
 
 // get categories / brands
@@ -77,16 +79,24 @@ $brands = $conn->query("SELECT * FROM brands WHERE active=1");
 
 <h2>Add Product</h2>
 
+<?php if (!empty($errors)): ?>
+  <div class="errors">
+    <?php foreach ($errors as $error): ?>
+      <p><?php echo $error; ?></p>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
 <form method="POST" enctype="multipart/form-data">
 
   <label>Product Name:</label><br>
-  <input type="text" name="product_name" required><br><br>
+  <input type="text" name="product_name"><br><br>
 
   <label>Model:</label><br>
-  <input type="text" name="model" required><br><br>
+  <input type="text" name="model"><br><br>
 
   <label>Price:</label><br>
-  <input type="number" step="0.01" name="price" required><br><br>
+  <input type="number" step="0.01" name="price"><br><br>
 
   <label>Description:</label><br>
   <textarea name="description" rows="5" style="width:100%;"></textarea><br><br>
@@ -95,7 +105,7 @@ $brands = $conn->query("SELECT * FROM brands WHERE active=1");
   <textarea name="specifications" rows="5" style="width:100%;"></textarea><br><br>
 
   <label>Stock Quantity:</label><br>
-  <input type="number" name="stock" required><br><br>
+  <input type="number" name="stock"><br><br>
 
   <label>Category:</label><br>
   <select name="category_id">

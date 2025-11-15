@@ -1,0 +1,116 @@
+/* Custom Styles */
+:root {
+    --primary-green: #004d26;
+    --secondary-green: #1e7a34;
+    --light-green: #3fa85c;
+    --light-gray: #f8f9fa;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.bg-primary-green {
+    background-color: var(--primary-green) !important;
+}
+
+.btn-primary-green {
+    background-color: var(--primary-green);
+    color: white;
+    border: none;
+}
+
+.btn-primary-green:hover {
+    background-color: var(--secondary-green);
+    color: white;
+}
+
+.product-card {
+    border: 1px solid #dee2e6;
+    border-radius: .25rem;
+    transition: box-shadow .3s;
+}
+
+.product-card:hover {
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+}
+
+.admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 250px;
+    padding: 20px;
+    background-color: var(--primary-green);
+    color: white;
+}
+
+.admin-sidebar a {
+    color: rgba(255, 255, 255, 0.8);
+    display: block;
+    padding: 10px 15px;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.admin-sidebar a:hover {
+    background-color: var(--secondary-green);
+    color: white;
+}
+
+.admin-main-content {
+    margin-left: 250px;
+    padding: 20px;
+}
+
+.filter-sidebar {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+}
+
+.product-card-new {
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease-in-out;
+}
+
+.product-card-new:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-5px);
+}
+
+.product-card-new .card-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.product-card-new .card-img-top {
+    max-height: 200px;
+    object-fit: contain;
+    padding: 1rem;
+}
+
+.quantity-selector {
+    display: flex;
+    align-items: center;
+}
+
+.nav-tabs .nav-link.active {
+    border-color: #dee2e6 #dee2e6 #fff;
+    background-color: #fff;
+    color: #000;
+    font-weight: bold;
+}
+
+.nav-tabs .nav-link {
+    color: #6c757d;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: #e9ecef #e9ecef #dee2e6;
+}

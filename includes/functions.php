@@ -27,4 +27,9 @@ function isAdmin() {
     return isset($_SESSION['admin_id']);
 }
 
+function filter_bad_words($text) {
+    $bad_words = ['bad', 'foul', 'curse']; // Add more words to the array
+    return str_ireplace($bad_words, '****', $text);
+}
+
 ?>

@@ -1,0 +1,79 @@
+:root {
+    --primary-green: #004d26;
+    --secondary-green: #1e7a34;
+}
+
+body {
+    background-color: #f8f9fa;
+}
+
+.admin-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    padding: 48px 0 0;
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    background-color: var(--primary-green);
+}
+
+.admin-sidebar a {
+    color: rgba(255, 255, 255, 0.8);
+    transition: all 0.2s;
+}
+
+.admin-sidebar a:hover, .admin-sidebar .nav-link.active {
+    background-color: var(--secondary-green);
+    color: white;
+}
+
+.admin-sidebar .nav-link i {
+    margin-right: 10px;
+}
+
+.stat-card .card-body {
+    display: flex;
+    align-items: center;
+}
+
+.stat-card i {
+    font-size: 3rem;
+    margin-right: 1.5rem;
+    opacity: 0.6;
+}
+
+.stat-card .stat-text span {
+    font-size: 0.9rem;
+}
+
+.stat-card .stat-text h2 {
+    margin: 0;
+    font-weight: bold;
+}
+
+.bg-primary-green {
+    background-color: var(--primary-green) !important;
+}
+
+.bg-secondary-green {
+    background-color: var(--secondary-green) !important;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0 20px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fff;
+    border-bottom: 1px solid #e9ecef;
+}
+
+
+.table thead.sticky-top {
+    top: -1px;
+}
