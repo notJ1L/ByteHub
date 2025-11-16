@@ -1,28 +1,57 @@
 <?php
-include '../includes/db.php';
-include '../includes/functions.php';
+ob_start();
+session_start();
+include '../../includes/db.php';
+include '../../includes/functions.php';
 
-if (!isAdmin()) {
-    redirect('../customer/index.php');
+if (!isset($_SESSION['admin_id'])) {
+    ob_end_clean();
+    redirect('../index.php');
 }
+
+$errors = [];
 
 if (isset($_POST['save'])) {
-    $name = $_POST['name'];
-    $slug = $_POST['slug'];
-    $active = $_POST['active'];
+    $name = trim($_POST['name']);
+    $slug = trim($_POST['slug']);
+    $active = (int)$_POST['active'];
 
-    $stmt = $conn->prepare("INSERT INTO brands (name, slug, active) VALUES (?, ?, ?)");
-    $stmt->bind_param("ssi", $name, $slug, $active);
-
-    if ($stmt->execute()) {
-        redirect("brands.php?added=1");
-    } else {
-        $error = "Failed to add brand!";
+    // Validation
+    if (empty($name)) {
+        $errors[] = "Brand name is required.";
     }
-    $stmt->close();
+    if (empty($slug)) {
+        $errors[] = "Slug is required.";
+    }
+
+    // Check if slug already exists
+    if (empty($errors)) {
+        $checkStmt = $conn->prepare("SELECT brand_id FROM brands WHERE slug = ?");
+        $checkStmt->bind_param("s", $slug);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+        if ($result->num_rows > 0) {
+            $errors[] = "Slug already exists. Please use a different slug.";
+        }
+        $checkStmt->close();
+    }
+
+    if (empty($errors)) {
+        $stmt = $conn->prepare("INSERT INTO brands (name, slug, active) VALUES (?, ?, ?)");
+        $stmt->bind_param("ssi", $name, $slug, $active);
+
+        if ($stmt->execute()) {
+            $stmt->close();
+            ob_end_clean();
+            redirect("brands.php?added=1");
+        } else {
+            $errors[] = "Failed to add brand: " . $conn->error;
+        }
+        $stmt->close();
+    }
 }
 
-include '../includes/admin_header.php';
+include '../../includes/admin_header.php';
 ?>
 
 <div class="admin-content">
@@ -40,9 +69,15 @@ include '../includes/admin_header.php';
             </a>
         </div>
 
-        <?php if(isset($error)): ?>
+        <?php if (!empty($errors)): ?>
             <div class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Please fix the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                    <?php foreach ($errors as $error): ?>
+                        <li><?php echo htmlspecialchars($error); ?></li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
         <?php endif; ?>
 
@@ -53,13 +88,15 @@ include '../includes/admin_header.php';
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
                             <input type="text" name="name" class="form-control" required
-                                   placeholder="e.g., Apple, Samsung">
+                                   placeholder="e.g., Apple, Samsung"
+                                   value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>">
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Slug <span class="text-danger">*</span></label>
                             <input type="text" name="slug" class="form-control" required
-                                   placeholder="e.g., apple, samsung">
+                                   placeholder="e.g., apple, samsung"
+                                   value="<?php echo isset($_POST['slug']) ? htmlspecialchars($_POST['slug']) : ''; ?>">
                             <small class="text-muted">URL-friendly identifier (lowercase, no spaces)</small>
                         </div>
 

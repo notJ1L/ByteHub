@@ -50,6 +50,45 @@ $result->data_seek(0);
 ?>
 
 <div class="admin-content" style="max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
+    <!-- Success/Error Messages -->
+    <?php if (isset($_GET['added']) && $_GET['added'] == '1'): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Success!</strong> Expense has been added successfully.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['updated']) && $_GET['updated'] == '1'): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Success!</strong> Expense has been updated successfully.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['deleted']) && $_GET['deleted'] == '1'): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Success!</strong> Expense has been deleted successfully.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <?php if ($_GET['error'] == 'invalid_id'): ?>
+                <strong>Error!</strong> Invalid expense ID.
+            <?php elseif ($_GET['error'] == 'not_found'): ?>
+                <strong>Error!</strong> Expense not found.
+            <?php else: ?>
+                <strong>Error!</strong> An error occurred while processing your request.
+            <?php endif; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
     <!-- Page Header -->
     <div class="page-header mb-4">
         <div>

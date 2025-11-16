@@ -1,35 +1,57 @@
 <?php
+ob_start();
+session_start();
 include '../../includes/db.php';
 include '../../includes/functions.php';
 
-if (!isAdmin()) {
-    redirect('../customer/index.php');
+if (!isset($_SESSION['admin_id'])) {
+    ob_end_clean();
+    redirect('../index.php');
 }
 
-$id = $_GET['id'] ?? 0;
+$id = (int)$_GET['id'] ?? 0;
 
-$expense = $conn->query("SELECT * FROM expenses WHERE expenses_id = $id")->fetch_assoc();
+$stmt = $conn->prepare("SELECT * FROM expenses WHERE expenses_id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$result = $stmt->get_result();
+$expense = $result->fetch_assoc();
+$stmt->close();
+
 if (!$expense) {
-    echo '<div class="admin-content"><div class="container-fluid"><div class="alert alert-danger">Expense not found.</div></div></div>';
-    include '../footer.php';
-    exit;
+    ob_end_clean();
+    redirect("expenses.php?error=not_found");
 }
+
+$errors = [];
 
 if (isset($_POST['update'])) {
-    $title = $_POST['title'];
-    $amount = $_POST['amount'];
-    $category = $_POST['category'];
-    $notes = $_POST['notes'];
+    $title = trim($_POST['title']);
+    $amount = (float)$_POST['amount'];
+    $category = trim($_POST['category']);
+    $notes = trim($_POST['notes']);
 
-    $stmt = $conn->prepare("UPDATE expenses SET title=?, amount=?, category=?, notes=? WHERE expenses_id = ?");
-    $stmt->bind_param("sdssi", $title, $amount, $category, $notes, $id);
-
-    if ($stmt->execute()) {
-        redirect("expenses.php?updated=1");
-    } else {
-        $error = "Failed to update expense!";
+    // Validation
+    if (empty($title)) {
+        $errors[] = "Title is required.";
     }
-    $stmt->close();
+    if (empty($amount) || $amount <= 0) {
+        $errors[] = "Amount must be greater than 0.";
+    }
+
+    if (empty($errors)) {
+        $stmt = $conn->prepare("UPDATE expenses SET title=?, amount=?, category=?, notes=? WHERE expenses_id = ?");
+        $stmt->bind_param("sdssi", $title, $amount, $category, $notes, $id);
+
+        if ($stmt->execute()) {
+            $stmt->close();
+            ob_end_clean();
+            redirect("expenses.php?updated=1");
+        } else {
+            $errors[] = "Failed to update expense: " . $conn->error;
+        }
+        $stmt->close();
+    }
 }
 
 include '../../includes/admin_header.php';
@@ -50,9 +72,15 @@ include '../../includes/admin_header.php';
             </a>
         </div>
 
-        <?php if(isset($error)): ?>
+        <?php if (!empty($errors)): ?>
             <div class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Please fix the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                    <?php foreach ($errors as $error): ?>
+                        <li><?php echo htmlspecialchars($error); ?></li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
         <?php endif; ?>
 

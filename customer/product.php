@@ -331,7 +331,7 @@ if ($result && $result->num_rows > 0) {
                             <form method="POST" action="add_review.php?product_id=<?php echo $id; ?>">
                                 <div class="mb-2">
                                     <label for="rating" class="form-label fw-semibold small">Rating</label>
-                                    <select name="rating" id="rating" class="form-select form-select-sm" required>
+                                    <select name="rating" id="rating" class="form-select form-select-sm">
                                         <option value="">Select rating...</option>
                                         <option value="5">5 Stars - Excellent</option>
                                         <option value="4">4 Stars - Very Good</option>
@@ -342,7 +342,7 @@ if ($result && $result->num_rows > 0) {
                                 </div>
                                 <div class="mb-2">
                                     <label for="comment" class="form-label fw-semibold small">Your Review</label>
-                                    <textarea name="comment" id="comment" class="form-control form-control-sm" rows="4" placeholder="Share your experience..." required></textarea>
+                                    <textarea name="comment" id="comment" class="form-control form-control-sm" rows="4" placeholder="Share your experience..."></textarea>
                                 </div>
                                 <button type="submit" class="btn btn-primary-green btn-sm">
                                     <i class="bi bi-send me-1"></i>Submit Review

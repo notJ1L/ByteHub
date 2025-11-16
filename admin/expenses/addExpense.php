@@ -1,27 +1,44 @@
 <?php
+ob_start();
+session_start();
 include '../../includes/db.php';
 include '../../includes/functions.php';
 
-if (!isAdmin()) {
-    redirect('../customer/index.php');
+if (!isset($_SESSION['admin_id'])) {
+    ob_end_clean();
+    redirect('../index.php');
 }
 
+$errors = [];
+
 if (isset($_POST['save'])) {
-    $title = $_POST['title'];
-    $amount = $_POST['amount'];
-    $category = $_POST['category'];
-    $notes = $_POST['notes'];
+    $title = trim($_POST['title']);
+    $amount = (float)$_POST['amount'];
+    $category = trim($_POST['category']);
+    $notes = trim($_POST['notes']);
     $created_at = date("Y-m-d H:i:s");
 
-    $stmt = $conn->prepare("INSERT INTO expenses (title, amount, category, notes, created_at) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sdsss", $title, $amount, $category, $notes, $created_at);
-
-    if ($stmt->execute()) {
-        redirect("expenses.php?added=1");
-    } else {
-        $error = "Failed to add expense!";
+    // Validation
+    if (empty($title)) {
+        $errors[] = "Title is required.";
     }
-    $stmt->close();
+    if (empty($amount) || $amount <= 0) {
+        $errors[] = "Amount must be greater than 0.";
+    }
+
+    if (empty($errors)) {
+        $stmt = $conn->prepare("INSERT INTO expenses (title, amount, category, notes, created_at) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("sdsss", $title, $amount, $category, $notes, $created_at);
+
+        if ($stmt->execute()) {
+            $stmt->close();
+            ob_end_clean();
+            redirect("expenses.php?added=1");
+        } else {
+            $errors[] = "Failed to add expense: " . $conn->error;
+        }
+        $stmt->close();
+    }
 }
 
 include '../../includes/admin_header.php';
@@ -42,9 +59,15 @@ include '../../includes/admin_header.php';
             </a>
         </div>
 
-        <?php if(isset($error)): ?>
+        <?php if (!empty($errors)): ?>
             <div class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Please fix the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                    <?php foreach ($errors as $error): ?>
+                        <li><?php echo htmlspecialchars($error); ?></li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
         <?php endif; ?>
 
@@ -55,7 +78,8 @@ include '../../includes/admin_header.php';
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
                             <input type="text" name="title" class="form-control" required
-                                   placeholder="e.g., Office Supplies, Utilities">
+                                   placeholder="e.g., Office Supplies, Utilities"
+                                   value="<?php echo isset($_POST['title']) ? htmlspecialchars($_POST['title']) : ''; ?>">
                         </div>
 
                         <div class="col-md-6">
@@ -63,14 +87,16 @@ include '../../includes/admin_header.php';
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
                                 <input type="number" step="0.01" name="amount" class="form-control" required
-                                       placeholder="0.00">
+                                       placeholder="0.00"
+                                       value="<?php echo isset($_POST['amount']) ? htmlspecialchars($_POST['amount']) : ''; ?>">
                             </div>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Category</label>
                             <input type="text" name="category" class="form-control"
-                                   placeholder="e.g., Office Supplies, Utilities, Marketing">
+                                   placeholder="e.g., Office Supplies, Utilities, Marketing"
+                                   value="<?php echo isset($_POST['category']) ? htmlspecialchars($_POST['category']) : ''; ?>">
                         </div>
 
                         <div class="col-md-6">
@@ -84,7 +110,7 @@ include '../../includes/admin_header.php';
                         <div class="col-12">
                             <label class="form-label fw-semibold">Notes</label>
                             <textarea name="notes" class="form-control" rows="4"
-                                      placeholder="Additional notes about this expense..."></textarea>
+                                      placeholder="Additional notes about this expense..."><?php echo isset($_POST['notes']) ? htmlspecialchars($_POST['notes']) : ''; ?></textarea>
                         </div>
 
                         <div class="col-12">

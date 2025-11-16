@@ -76,13 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <span class="input-group-text bg-light border-end-0">
                                     <i class="bi bi-envelope text-muted"></i>
                                 </span>
-                                <input type="email" 
+                                <input type="text" 
                                        class="form-control border-start-0 ps-0" 
                                        id="email" 
                                        name="email" 
                                        value="<?php echo htmlspecialchars($email); ?>" 
                                        placeholder="your.email@example.com"
-                                       required
                                        autocomplete="email">
                             </div>
                         </div>
@@ -100,7 +99,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                        id="password" 
                                        name="password" 
                                        placeholder="Enter your password"
-                                       required
                                        autocomplete="current-password">
                                 <button class="btn btn-outline-secondary border-start-0" 
                                         type="button" 

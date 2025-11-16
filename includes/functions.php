@@ -28,6 +28,14 @@ function isAdmin() {
 }
 
 function filter_bad_words($text) {
-    $bad_words = ['bad', 'foul', 'curse']; // Add more words to the array
-    return str_ireplace($bad_words, '****', $text);
+    // List of bad/foul words to filter
+    $bad_words = ['bad', 'foul', 'curse', 'damn', 'hell', 'stupid', 'idiot', 'hate'];
+    
+    // Use regex to match whole words only (case-insensitive)
+    foreach ($bad_words as $word) {
+        $pattern = '/\b' . preg_quote($word, '/') . '\b/i';
+        $text = preg_replace($pattern, '****', $text);
+    }
+    
+    return $text;
 }

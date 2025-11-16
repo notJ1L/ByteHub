@@ -48,6 +48,29 @@ if ($stmt) {
         </div>
     </div>
 
+    <!-- Success/Error Messages -->
+    <?php if (isset($_GET['deleted']) && $_GET['deleted'] == '1'): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Success!</strong> Category has been deleted successfully.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <?php if ($_GET['error'] == 'in_use'): ?>
+                <strong>Cannot Delete!</strong> This category is being used by <?php echo htmlspecialchars($_GET['count'] ?? 0); ?> product(s). Please remove or reassign those products first.
+            <?php elseif ($_GET['error'] == 'invalid_id'): ?>
+                <strong>Error!</strong> Invalid category ID.
+            <?php else: ?>
+                <strong>Error!</strong> An error occurred while processing your request.
+            <?php endif; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
     <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header">

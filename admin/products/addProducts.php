@@ -1,13 +1,13 @@
 <?php
+ob_start();
 session_start();
 include '../../includes/db.php';
 include '../../includes/functions.php';
 
 if (!isset($_SESSION['admin_id'])) {
+  ob_end_clean();
   redirect('index.php');
 }
-
-include '../../includes/admin_header.php';
 
 $errors = [];
 
@@ -41,35 +41,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $product_id = $conn->insert_id;
 
+    // Ensure uploads directory exists
+    $uploadDir = "../../uploads/products/";
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
     // MAIN IMAGE UPLOAD
-    if (!empty($_FILES['image']['name'])) {
+    if (!empty($_FILES['image']['name']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
         $mainImage = time() . '_' . $_FILES['image']['name'];
-        $target = "../../uploads/products/" . $mainImage;
+        $target = $uploadDir . $mainImage;
 
-        move_uploaded_file($_FILES['image']['tmp_name'], $target);
-
-        $stmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
-        $stmt->bind_param("si", $mainImage, $product_id);
-        $stmt->execute();
+        if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
+            $stmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
+            $stmt->bind_param("si", $mainImage, $product_id);
+            $stmt->execute();
+        }
     }
 
     // MULTIPLE IMAGES UPLOAD
     if (!empty($_FILES['images']['name'][0])) {
       foreach ($_FILES['images']['name'] as $key => $filename) {
-          $imgName = time() . '_' . $filename;
-          $uploadPath = "../../uploads/products/" . $imgName;
+          if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
+              $imgName = time() . '_' . $filename;
+              $uploadPath = $uploadDir . $imgName;
 
-          if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $uploadPath)) {
-              $stmt = $conn->prepare("INSERT INTO product_images (product_id, filename) VALUES (?, ?)");
-              $stmt->bind_param("is", $product_id, $imgName);
-              $stmt->execute();
+              if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $uploadPath)) {
+                  $stmt = $conn->prepare("INSERT INTO product_images (product_id, filename) VALUES (?, ?)");
+                  $stmt->bind_param("is", $product_id, $imgName);
+                  $stmt->execute();
+              }
           }
       }
     }
 
+    ob_end_clean();
     redirect('products.php');
   }
 }
+
+include '../../includes/admin_header.php';
 
 // get categories / brands
 $cats = $conn->query("SELECT * FROM categories WHERE active=1");

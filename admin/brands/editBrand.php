@@ -1,34 +1,68 @@
 <?php
+ob_start();
+session_start();
 include '../../includes/db.php';
 include '../../includes/functions.php';
 
-if (!isAdmin()) {
-    redirect('../customer/index.php');
+if (!isset($_SESSION['admin_id'])) {
+    ob_end_clean();
+    redirect('../index.php');
 }
 
-$id = $_GET['id'] ?? 0;
+$id = (int)$_GET['id'] ?? 0;
 
-$brandQuery = $conn->query("SELECT * FROM brands WHERE brand_id = $id LIMIT 1");
-$brand = $brandQuery->fetch_assoc();
+$stmt = $conn->prepare("SELECT * FROM brands WHERE brand_id = ? LIMIT 1");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$result = $stmt->get_result();
+$brand = $result->fetch_assoc();
+$stmt->close();
 
 if (!$brand) {
-    die("Brand not found.");
+    ob_end_clean();
+    redirect("brands.php?error=not_found");
 }
 
+$errors = [];
+
 if (isset($_POST['update'])) {
-    $name = $_POST['name'];
-    $slug = $_POST['slug'];
-    $active = $_POST['active'];
+    $name = trim($_POST['name']);
+    $slug = trim($_POST['slug']);
+    $active = (int)$_POST['active'];
 
-    $stmt = $conn->prepare("UPDATE brands SET name=?, slug=?, active=? WHERE brand_id = ?");
-    $stmt->bind_param("ssii", $name, $slug, $active, $id);
-
-    if ($stmt->execute()) {
-        redirect("brands.php?updated=1");
-    } else {
-        $error = "Failed to update brand!";
+    // Validation
+    if (empty($name)) {
+        $errors[] = "Brand name is required.";
     }
-    $stmt->close();
+    if (empty($slug)) {
+        $errors[] = "Slug is required.";
+    }
+
+    // Check if slug already exists (excluding current brand)
+    if (empty($errors)) {
+        $checkStmt = $conn->prepare("SELECT brand_id FROM brands WHERE slug = ? AND brand_id != ?");
+        $checkStmt->bind_param("si", $slug, $id);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+        if ($result->num_rows > 0) {
+            $errors[] = "Slug already exists. Please use a different slug.";
+        }
+        $checkStmt->close();
+    }
+
+    if (empty($errors)) {
+        $stmt = $conn->prepare("UPDATE brands SET name=?, slug=?, active=? WHERE brand_id = ?");
+        $stmt->bind_param("ssii", $name, $slug, $active, $id);
+
+        if ($stmt->execute()) {
+            $stmt->close();
+            ob_end_clean();
+            redirect("brands.php?updated=1");
+        } else {
+            $errors[] = "Failed to update brand: " . $conn->error;
+        }
+        $stmt->close();
+    }
 }
 
 include '../../includes/admin_header.php';
@@ -49,9 +83,15 @@ include '../../includes/admin_header.php';
             </a>
         </div>
 
-        <?php if(isset($error)): ?>
+        <?php if (!empty($errors)): ?>
             <div class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Please fix the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                    <?php foreach ($errors as $error): ?>
+                        <li><?php echo htmlspecialchars($error); ?></li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
         <?php endif; ?>
 

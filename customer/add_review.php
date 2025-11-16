@@ -9,6 +9,7 @@ if (!is_logged_in()) {
 
 $product_id = $_GET['product_id'];
 $user_id = $_SESSION['user_id'];
+$errors = [];
 
 // Check if user already has a review for this product
 $existing_review = $conn->prepare("SELECT review_id FROM reviews WHERE product_id = ? AND user_id = ?");
@@ -36,20 +37,46 @@ if ($result->num_rows == 0) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rating = (int)$_POST['rating'];
     $comment = trim($_POST['comment']);
+    
+    // Validate rating
+    if (empty($rating) || $rating < 1 || $rating > 5) {
+        $errors[] = 'Please select a valid rating.';
+    }
+    
+    // Validate comment
+    if (empty($comment)) {
+        $errors[] = 'Comment is required.';
+    }
+    
+    if (empty($errors)) {
+        // Filter bad words using regex
+        $comment = filter_bad_words($comment);
+        
+        $stmt = $conn->prepare("INSERT INTO reviews (product_id, user_id, rating, comment) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("iiis", $product_id, $user_id, $rating, $comment);
+        $stmt->execute();
 
-    $stmt = $conn->prepare("INSERT INTO reviews (product_id, user_id, rating, comment) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("iiis", $product_id, $user_id, $rating, $comment);
-    $stmt->execute();
-
-    redirect('product.php?id=' . $product_id);
+        redirect('product.php?id=' . $product_id);
+    }
 }
 ?>
 
 <h2>Add Review</h2>
 
+<?php if (!empty($errors)): ?>
+    <div class="alert alert-danger">
+        <ul>
+            <?php foreach ($errors as $error): ?>
+                <li><?php echo htmlspecialchars($error); ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+<?php endif; ?>
+
 <form method="POST">
     <label>Rating:</label><br>
-    <select name="rating" required>
+    <select name="rating">
+        <option value="">Select rating...</option>
         <option value="5">5 Stars</option>
         <option value="4">4 Stars</option>
         <option value="3">3 Stars</option>

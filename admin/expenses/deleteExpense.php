@@ -1,14 +1,27 @@
 <?php
-include '../includes/db.php';
-include '../includes/functions.php';
+ob_start();
+session_start();
+include '../../includes/db.php';
+include '../../includes/functions.php';
 
-if (!isAdmin()) {
-    redirect('../customer/index.php');
+if (!isset($_SESSION['admin_id'])) {
+    ob_end_clean();
+    redirect('../index.php');
 }
 
-$id = $_GET['id'];
+$id = (int)$_GET['id'];
 
-$conn->query("DELETE FROM expenses WHERE expenses_id = $id");
+if (!$id) {
+    ob_end_clean();
+    redirect("expenses.php?error=invalid_id");
+}
 
+// Delete expense
+$stmt = $conn->prepare("DELETE FROM expenses WHERE expenses_id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$stmt->close();
+
+ob_end_clean();
 redirect("expenses.php?deleted=1");
 ?>
