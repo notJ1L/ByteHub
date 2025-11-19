@@ -59,27 +59,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         mkdir($uploadDir, 0755, true);
     }
 
-    if (!empty($_FILES['image']['name']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $mainImage = time() . '_' . $_FILES['image']['name'];
-        $target = $uploadDir . $mainImage;
+    // Allowed image types
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $maxFileSize = 5 * 1024 * 1024; // 5MB
 
-        if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
-            $stmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
-            $stmt->bind_param("si", $mainImage, $product_id);
-            $stmt->execute();
+    if (!empty($_FILES['image']['name']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        // Validate file type
+        $fileType = mime_content_type($_FILES['image']['tmp_name']);
+        if (in_array($fileType, $allowedTypes) && $_FILES['image']['size'] <= $maxFileSize) {
+            // Generate unique filename
+            $fileExtension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+            $mainImage = uniqid('main_', true) . '_' . time() . '.' . $fileExtension;
+            $target = $uploadDir . $mainImage;
+
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
+                $updateStmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
+                $updateStmt->bind_param("si", $mainImage, $product_id);
+                $updateStmt->execute();
+                $updateStmt->close();
+            }
         }
     }
 
     if (!empty($_FILES['images']['name'][0])) {
         foreach ($_FILES['images']['name'] as $key => $filename) {
             if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
-                $imgName = time() . '_' . $filename;
+                // Validate file type
+                $fileType = mime_content_type($_FILES['images']['tmp_name'][$key]);
+                if (!in_array($fileType, $allowedTypes)) {
+                    continue; // Skip invalid files
+                }
+                
+                if ($_FILES['images']['size'][$key] > $maxFileSize) {
+                    continue; // Skip files that are too large
+                }
+
+                // Generate unique filename
+                $fileExtension = pathinfo($filename, PATHINFO_EXTENSION);
+                $imgName = uniqid('img_', true) . '_' . time() . '_' . $key . '.' . $fileExtension;
                 $uploadPath = $uploadDir . $imgName;
 
                 if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $uploadPath)) {
-                    $stmt = $conn->prepare("INSERT INTO product_images (product_id, filename) VALUES (?, ?)");
-                    $stmt->bind_param("is", $product_id, $imgName);
-                    $stmt->execute();
+                    $imgStmt = $conn->prepare("INSERT INTO product_images (product_id, filename) VALUES (?, ?)");
+                    $imgStmt->bind_param("is", $product_id, $imgName);
+                    $imgStmt->execute();
+                    $imgStmt->close();
                 }
             }
         }
