@@ -74,6 +74,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userStmt->close();
 
     if ($userData && !empty($userData['email'])) {
+      // Fetch order items for email
+      $itemsStmt = $conn->prepare("SELECT name_snapshot, unit_price_snapshot, quantity, line_total FROM order_items WHERE order_id = ?");
+      $itemsStmt->bind_param('i', $order_id);
+      $itemsStmt->execute();
+      $itemsResult = $itemsStmt->get_result();
+      $orderItems = [];
+      while ($item = $itemsResult->fetch_assoc()) {
+        $orderItems[] = $item;
+      }
+      $itemsStmt->close();
+
       $mail = new PHPMailer\PHPMailer\PHPMailer(true);
 
       $mail->isSMTP();
@@ -98,28 +109,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $body  = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
       $body .= '<title>Your ByteHub Order ' . htmlspecialchars($order_code) . '</title>';
       $body .= '</head><body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:24px;">';
-      $body .= '<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">';
-      $body .= '<tr><td style="background:#004d26;color:#ffffff;padding:16px 24px;font-size:20px;font-weight:bold;">ByteHub</td></tr>';
+      $body .= '<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">';
+      
+      // Header
+      $body .= '<tr><td style="background:linear-gradient(135deg, #004d26 0%, #1e7a34 100%);color:#ffffff;padding:20px 24px;font-size:22px;font-weight:bold;">ByteHub</td></tr>';
+      
+      // Content
       $body .= '<tr><td style="padding:24px;">';
-      $body .= '<h2 style="margin:0 0 16px 0;color:#212529;">Thank you for your order!</h2>';
-      $body .= '<p style="margin:0 0 12px 0;color:#495057;">Hi ' . htmlspecialchars($userData['username'] ?? 'there') . ',</p>';
-      $body .= '<p style="margin:0 0 16px 0;color:#495057;">We\'ve received your order and are getting it ready for you.</p>';
-      $body .= '<table cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;border-collapse:collapse;">';
-      $body .= '<tr><td style="padding:8px 0;color:#6c757d;">Order Code:</td><td style="padding:8px 0;font-weight:bold;color:#004d26;">' . htmlspecialchars($order_code) . '</td></tr>';
-      $body .= '<tr><td style="padding:4px 0;color:#6c757d;">Subtotal:</td><td style="padding:4px 0;">&#8369;' . number_format($subtotal, 2) . '</td></tr>';
-      $body .= '<tr><td style="padding:4px 0;color:#6c757d;">Tax (12%):</td><td style="padding:4px 0;">&#8369;' . number_format($tax, 2) . '</td></tr>';
-      $body .= '<tr><td style="padding:8px 0;border-top:1px solid #dee2e6;font-weight:bold;">Total:</td>';
-      $body .= '<td style="padding:8px 0;border-top:1px solid #dee2e6;font-weight:bold;color:#004d26;">&#8369;' . number_format($total, 2) . '</td></tr>';
+      $body .= '<h2 style="margin:0 0 16px 0;color:#212529;font-size:24px;">Thank you for your order!</h2>';
+      $body .= '<p style="margin:0 0 12px 0;color:#495057;font-size:15px;">Hi ' . htmlspecialchars($userData['username'] ?? 'there') . ',</p>';
+      $body .= '<p style="margin:0 0 20px 0;color:#495057;font-size:15px;">We\'ve received your order and are getting it ready for you.</p>';
+      
+      // Order Code
+      $body .= '<div style="background:#f8f9fa;padding:12px 16px;border-radius:6px;margin-bottom:20px;border-left:4px solid #004d26;">';
+      $body .= '<strong style="color:#6c757d;font-size:13px;">Order Code:</strong> ';
+      $body .= '<span style="color:#004d26;font-weight:bold;font-size:16px;">' . htmlspecialchars($order_code) . '</span>';
+      $body .= '</div>';
+      
+      // Products List
+      $body .= '<h3 style="margin:24px 0 12px 0;color:#212529;font-size:18px;font-weight:600;">Order Items</h3>';
+      $body .= '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:20px;">';
+      $body .= '<thead><tr style="background:#f8f9fa;">';
+      $body .= '<th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;color:#495057;font-size:13px;font-weight:600;">Product</th>';
+      $body .= '<th style="padding:12px;text-align:center;border-bottom:2px solid #dee2e6;color:#495057;font-size:13px;font-weight:600;">Qty</th>';
+      $body .= '<th style="padding:12px;text-align:right;border-bottom:2px solid #dee2e6;color:#495057;font-size:13px;font-weight:600;">Unit Price</th>';
+      $body .= '<th style="padding:12px;text-align:right;border-bottom:2px solid #dee2e6;color:#495057;font-size:13px;font-weight:600;">Subtotal</th>';
+      $body .= '</tr></thead><tbody>';
+      
+      foreach ($orderItems as $item) {
+        $body .= '<tr style="border-bottom:1px solid #e9ecef;">';
+        $body .= '<td style="padding:12px;color:#212529;font-size:14px;">' . htmlspecialchars($item['name_snapshot']) . '</td>';
+        $body .= '<td style="padding:12px;text-align:center;color:#495057;font-size:14px;">' . (int)$item['quantity'] . '</td>';
+        $body .= '<td style="padding:12px;text-align:right;color:#495057;font-size:14px;">&#8369;' . number_format($item['unit_price_snapshot'], 2) . '</td>';
+        $body .= '<td style="padding:12px;text-align:right;color:#212529;font-size:14px;font-weight:600;">&#8369;' . number_format($item['line_total'], 2) . '</td>';
+        $body .= '</tr>';
+      }
+      
+      $body .= '</tbody></table>';
+      
+      // Order Summary
+      $body .= '<table cellpadding="0" cellspacing="0" style="width:100%;margin:20px 0;border-collapse:collapse;">';
+      $body .= '<tr><td style="padding:8px 0;color:#6c757d;font-size:14px;">Subtotal:</td><td style="padding:8px 0;text-align:right;color:#212529;font-size:14px;">&#8369;' . number_format($subtotal, 2) . '</td></tr>';
+      $body .= '<tr><td style="padding:8px 0;color:#6c757d;font-size:14px;">Tax (12%):</td><td style="padding:8px 0;text-align:right;color:#212529;font-size:14px;">&#8369;' . number_format($tax, 2) . '</td></tr>';
+      $body .= '<tr><td style="padding:12px 0;border-top:2px solid #dee2e6;font-weight:bold;color:#212529;font-size:16px;">Grand Total:</td>';
+      $body .= '<td style="padding:12px 0;border-top:2px solid #dee2e6;text-align:right;font-weight:bold;color:#004d26;font-size:18px;">&#8369;' . number_format($total, 2) . '</td></tr>';
       $body .= '</table>';
-      $body .= '<p style="margin:16px 0;color:#495057;">You can view your full order details and track its status at any time in your ByteHub account under <strong>My Orders</strong>.</p>';
-      $body .= '<p style="margin:24px 0 8px 0;color:#495057;">Thank you for shopping with ByteHub!</p>';
+      
+      $body .= '<p style="margin:20px 0;color:#495057;font-size:14px;line-height:1.6;">You can view your full order details and track its status at any time in your ByteHub account under <strong>My Orders</strong>.</p>';
+      $body .= '<p style="margin:24px 0 8px 0;color:#495057;font-size:15px;">Thank you for shopping with ByteHub!</p>';
       $body .= '<p style="margin:0;color:#6c757d;font-size:13px;">If you didn\'t place this order, please contact our support team immediately.</p>';
       $body .= '</td></tr>';
-      $body .= '<tr><td style="background:#f1f3f5;padding:16px 24px;text-align:center;font-size:12px;color:#868e96;">&copy; ' . date('Y') . ' ByteHub. All rights reserved.</td></tr>';
+      
+      // Footer
+      $body .= '<tr><td style="background:#f1f3f5;padding:16px 24px;text-align:center;font-size:12px;color:#868e96;border-top:1px solid #dee2e6;">&copy; ' . date('Y') . ' ByteHub. All rights reserved.</td></tr>';
       $body .= '</table></body></html>';
 
+      // Plain text alternative
+      $altBody = "Thank you for your order at ByteHub!\n\n";
+      $altBody .= "Order Code: " . $order_code . "\n\n";
+      $altBody .= "Order Items:\n";
+      foreach ($orderItems as $item) {
+        $altBody .= "- " . $item['name_snapshot'] . " (Qty: " . (int)$item['quantity'] . ") - ₱" . number_format($item['line_total'], 2) . "\n";
+      }
+      $altBody .= "\nSubtotal: ₱" . number_format($subtotal, 2) . "\n";
+      $altBody .= "Tax (12%): ₱" . number_format($tax, 2) . "\n";
+      $altBody .= "Grand Total: ₱" . number_format($total, 2) . "\n\n";
+      $altBody .= "You can view your order details in My Orders.";
+
       $mail->Body    = $body;
-      $mail->AltBody = 'Thank you for your order at ByteHub. Order code: ' . $order_code . ', Total: PHP ' . number_format($total, 2) . '. You can view your order in My Orders.';
+      $mail->AltBody = $altBody;
 
       // Send without breaking checkout flow if it fails
       $mail->send();
