@@ -29,7 +29,7 @@ function isAdmin() {
 
 function filter_bad_words($text) {
     // List of bad/foul words to filter
-    $bad_words = ['bad', 'foul', 'curse', 'damn', 'hell', 'stupid', 'idiot', 'hate'];
+    $bad_words = ['bad', 'foul', 'curse', 'damn', 'hell', 'stupid', 'idiot', 'hate', 'puta', 'bobo', 'gago', 'tangina', 'tanga'];
     
     // Use regex to match whole words only (case-insensitive)
     foreach ($bad_words as $word) {

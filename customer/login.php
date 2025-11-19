@@ -4,6 +4,13 @@ include '../includes/functions.php';
 
 $errors = [];
 $email = '';
+$login_message = '';
+
+// Show one-time message when redirected from protected pages
+if (!empty($_SESSION['login_message'])) {
+    $login_message = $_SESSION['login_message'];
+    unset($_SESSION['login_message']);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
@@ -14,24 +21,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$errors) {
-        $stmt = $conn->prepare("SELECT user_id, username, password_hash FROM users WHERE email=? LIMIT 1");
+        // 1) Try to authenticate as a normal/user-table account
+        $stmt = $conn->prepare("SELECT user_id, username, password_hash, role, active FROM users WHERE email=? LIMIT 1");
         $stmt->bind_param('s', $email);
         $stmt->execute();
         $res = $stmt->get_result();
         if ($row = $res->fetch_assoc()) {
-            if (password_verify($password, $row['password_hash'])) {
+            if (!$row['active']) {
+                $errors[] = 'Your account has been deactivated. Please contact support.';
+            } elseif (password_verify($password, $row['password_hash'])) {
                 if (session_status() === PHP_SESSION_NONE) session_start();
                 session_regenerate_id(true);
                 $_SESSION['user_id'] = (int)$row['user_id'];
                 $_SESSION['username'] = $row['username'];
-                redirect(after_login_redirect_path());
-            } else {
-                $errors[] = 'Invalid credentials.';
+
+                // If this user has admin role, also log them into the admin panel
+                if (isset($row['role']) && $row['role'] === 'admin') {
+                    $_SESSION['admin_id'] = (int)$row['user_id'];
+                    $_SESSION['admin_email'] = $email;
+                    redirect('../admin/dashboard.php');
+                } else {
+                    redirect(after_login_redirect_path());
+                }
+                $stmt->close();
+                exit;
             }
+            $stmt->close();
         } else {
+            $stmt->close();
+        }
+
+        // 2) If no user (or password invalid), try admin table so admin can log in here too
+        if (!$errors) {
+            $adminStmt = $conn->prepare("SELECT admin_id, email, password_hash FROM admin WHERE email = ? LIMIT 1");
+            $adminStmt->bind_param('s', $email);
+            $adminStmt->execute();
+            $adminRes = $adminStmt->get_result();
+            if ($admin = $adminRes->fetch_assoc()) {
+                if (password_verify($password, $admin['password_hash'])) {
+                    if (session_status() === PHP_SESSION_NONE) session_start();
+                    session_regenerate_id(true);
+                    $_SESSION['admin_id'] = (int)$admin['admin_id'];
+                    $_SESSION['admin_email'] = $admin['email'];
+                    redirect('../admin/dashboard.php');
+                    exit;
+                }
+            }
+            $adminStmt->close();
+        }
+
+        // If we get here, authentication failed
+        if (!$errors) {
             $errors[] = 'Invalid credentials.';
         }
-        $stmt->close();
     }
 }
 ?>
@@ -53,6 +95,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <!-- Error Messages -->
+                    <?php if ($login_message): ?>
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <?php echo htmlspecialchars($login_message); ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    <?php endif; ?>
+
                     <?php if ($errors): ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i>

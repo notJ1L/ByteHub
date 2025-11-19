@@ -2,9 +2,12 @@
 session_start();
 include '../includes/db.php';
 include '../includes/functions.php';
+require_once '../includes/config.php';
+require_once '../vendor/autoload.php';
 
 /* --- Require login --- */
 if (!isset($_SESSION['user_id'])) {
+  $_SESSION['login_message'] = 'Please log in to proceed to checkout.';
   $_SESSION['redirect_after_login'] = 'checkout.php';
   redirect('login.php');
 }
@@ -58,6 +61,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->close();
 
     $conn->query("UPDATE products SET stock = stock - $qty WHERE product_id = $pid");
+  }
+
+  /* --- Send confirmation email to the user (non-blocking) --- */
+  try {
+    // Get user email
+    $userStmt = $conn->prepare("SELECT email, username FROM users WHERE user_id = ?");
+    $userStmt->bind_param('i', $user_id);
+    $userStmt->execute();
+    $userResult = $userStmt->get_result();
+    $userData = $userResult->fetch_assoc();
+    $userStmt->close();
+
+    if ($userData && !empty($userData['email'])) {
+      $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+
+      $mail->isSMTP();
+      $mail->Host       = MAILTRAP_HOST;
+      $mail->SMTPAuth   = true;
+      $mail->Username   = MAILTRAP_USER;
+      $mail->Password   = MAILTRAP_PASS;
+      $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+      $mail->Port       = MAILTRAP_PORT;
+      $mail->CharSet    = 'UTF-8';
+
+      $mail->setFrom(MAILTRAP_USER, 'ByteHub');
+      $mail->addAddress($userData['email'], $userData['username'] ?? '');
+
+      $mail->isHTML(true);
+      $mail->Subject = 'Your ByteHub Order ' . $order_code;
+
+      // Professional HTML email template
+      $body  = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
+      $body .= '<title>Your ByteHub Order ' . htmlspecialchars($order_code) . '</title>';
+      $body .= '</head><body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:24px;">';
+      $body .= '<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">';
+      $body .= '<tr><td style="background:#004d26;color:#ffffff;padding:16px 24px;font-size:20px;font-weight:bold;">ByteHub</td></tr>';
+      $body .= '<tr><td style="padding:24px;">';
+      $body .= '<h2 style="margin:0 0 16px 0;color:#212529;">Thank you for your order!</h2>';
+      $body .= '<p style="margin:0 0 12px 0;color:#495057;">Hi ' . htmlspecialchars($userData['username'] ?? 'there') . ',</p>';
+      $body .= '<p style="margin:0 0 16px 0;color:#495057;">We\'ve received your order and are getting it ready for you.</p>';
+      $body .= '<table cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;border-collapse:collapse;">';
+      $body .= '<tr><td style="padding:8px 0;color:#6c757d;">Order Code:</td><td style="padding:8px 0;font-weight:bold;color:#004d26;">' . htmlspecialchars($order_code) . '</td></tr>';
+      $body .= '<tr><td style="padding:4px 0;color:#6c757d;">Subtotal:</td><td style="padding:4px 0;">&#8369;' . number_format($subtotal, 2) . '</td></tr>';
+      $body .= '<tr><td style="padding:4px 0;color:#6c757d;">Tax (12%):</td><td style="padding:4px 0;">&#8369;' . number_format($tax, 2) . '</td></tr>';
+      $body .= '<tr><td style="padding:8px 0;border-top:1px solid #dee2e6;font-weight:bold;">Total:</td>';
+      $body .= '<td style="padding:8px 0;border-top:1px solid #dee2e6;font-weight:bold;color:#004d26;">&#8369;' . number_format($total, 2) . '</td></tr>';
+      $body .= '</table>';
+      $body .= '<p style="margin:16px 0;color:#495057;">You can view your full order details and track its status at any time in your ByteHub account under <strong>My Orders</strong>.</p>';
+      $body .= '<p style="margin:24px 0 8px 0;color:#495057;">Thank you for shopping with ByteHub!</p>';
+      $body .= '<p style="margin:0;color:#6c757d;font-size:13px;">If you didn\'t place this order, please contact our support team immediately.</p>';
+      $body .= '</td></tr>';
+      $body .= '<tr><td style="background:#f1f3f5;padding:16px 24px;text-align:center;font-size:12px;color:#868e96;">&copy; ' . date('Y') . ' ByteHub. All rights reserved.</td></tr>';
+      $body .= '</table></body></html>';
+
+      $mail->Body    = $body;
+      $mail->AltBody = 'Thank you for your order at ByteHub. Order code: ' . $order_code . ', Total: PHP ' . number_format($total, 2) . '. You can view your order in My Orders.';
+
+      // Send without breaking checkout flow if it fails
+      $mail->send();
+    }
+  } catch (Throwable $e) {
+    // Fail silently; order placement should not break because of email
   }
 
   $_SESSION['cart'] = [];

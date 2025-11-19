@@ -264,7 +264,7 @@ include '../../includes/admin_header.php';
                                                      class="card-img-top" 
                                                      style="height: 150px; object-fit: cover;">
                                                 <div class="card-body p-2">
-                                                    <a href="deleteImage.php?id=<?= $img['image_id'] ?>&product=<?= $product_id ?>" 
+                                                    <a href="deleteImages.php?id=<?= $img['image_id'] ?>&product=<?= $product_id ?>" 
                                                        class="btn btn-sm btn-danger w-100"
                                                        onclick="return confirm('Delete this image?');">
                                                         <i class="bi bi-trash me-1"></i>Delete
