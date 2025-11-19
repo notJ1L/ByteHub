@@ -49,7 +49,7 @@ if ($result && $result->num_rows > 0) {
             SELECT o.order_id 
             FROM orders o
             JOIN order_items oi ON o.order_id = oi.order_id
-            WHERE o.user_id = ? AND oi.product_id = ? AND o.status = 'Completed'
+            WHERE o.user_id = ? AND oi.product_id = ? AND o.status != 'Cancelled'
             LIMIT 1
         ");
         $purchase_check->bind_param("ii", $user_id, $id);
@@ -790,6 +790,40 @@ if ($result && $result->num_rows > 0) {
     margin-bottom: 0.75rem;
     font-weight: 600;
     color: #212529;
+}
+
+.add-review-compact .form-select,
+.add-review-compact .form-control,
+.add-review-compact select,
+.add-review-compact textarea {
+    color: #212529 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #ced4da !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: block !important;
+}
+
+.add-review-compact .form-select:focus,
+.add-review-compact .form-control:focus,
+.add-review-compact select:focus,
+.add-review-compact textarea:focus {
+    color: #212529 !important;
+    background-color: #ffffff !important;
+    border-color: var(--primary-green) !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 77, 38, 0.25) !important;
+}
+
+.add-review-compact .form-select option,
+.add-review-compact select option {
+    color: #212529 !important;
+    background-color: #ffffff !important;
+}
+
+.add-review-compact textarea::placeholder,
+.add-review-compact .form-control::placeholder {
+    color: #6c757d !important;
+    opacity: 1 !important;
 }
 
 /* Reviews List */

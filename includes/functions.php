@@ -2,8 +2,15 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 function redirect(string $path) {
-    header("Location: $path");
-    exit;
+    // Only send header if headers haven't been sent yet
+    if (!headers_sent()) {
+        header("Location: $path");
+        exit;
+    } else {
+        // If headers already sent, use JavaScript redirect as fallback
+        echo "<script>window.location.href = '$path';</script>";
+        exit;
+    }
 }
 
 function is_logged_in(): bool {

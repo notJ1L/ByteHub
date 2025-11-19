@@ -78,10 +78,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
             $mail->Username   = MAILTRAP_USER;
             $mail->Password   = MAILTRAP_PASS;
             
-            if (defined($encryption_class . '::ENCRYPTION_STARTTLS')) {
-                $mail->SMTPSecure = constant($encryption_class . '::ENCRYPTION_STARTTLS');
-            } else {
-                $mail->SMTPSecure = 'tls';
+            // Mailtrap sandbox port 2525 doesn't use encryption
+            if (MAILTRAP_PORT != 2525) {
+                if (defined($encryption_class . '::ENCRYPTION_STARTTLS')) {
+                    $mail->SMTPSecure = constant($encryption_class . '::ENCRYPTION_STARTTLS');
+                } else {
+                    $mail->SMTPSecure = 'tls';
+                }
             }
             $mail->Port       = MAILTRAP_PORT;
 

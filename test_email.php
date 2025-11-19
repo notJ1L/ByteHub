@@ -42,26 +42,44 @@ try {
 	$mail->SMTPAuth   = true;
 	$mail->Username   = MAILTRAP_USER;
 	$mail->Password   = MAILTRAP_PASS;
-	$mail->SMTPSecure = defined('PHPMailer\\PHPMailer\\PHPMailer::ENCRYPTION_STARTTLS')
-		? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS
-		: 'tls';
+	// Mailtrap sandbox port 2525 doesn't use encryption
+	if (MAILTRAP_PORT != 2525) {
+		$mail->SMTPSecure = defined('PHPMailer\\PHPMailer\\PHPMailer::ENCRYPTION_STARTTLS')
+			? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS
+			: 'tls';
+	}
 	$mail->Port       = MAILTRAP_PORT;
+	
+	// Enable verbose debug output (optional, for troubleshooting)
+	// $mail->SMTPDebug = 2;
+	// $mail->Debugoutput = function($str, $level) { echo "Debug level $level: $str\n"; };
 
-	$mail->setFrom(MAILTRAP_USER, 'ByteHub Test');
+	$mail->setFrom('noreply@bytehub.com', 'ByteHub Test');
 	$mail->addAddress($toEmail, $toName);
 
 	$mail->isHTML(true);
-	$mail->Subject = 'ByteHub SMTP Test (Gmail)';
-	$mail->Body    = '<h2>SMTP Test Successful</h2><p>This is a test email sent via Gmail SMTP using PHPMailer.</p>';
-	$mail->AltBody = 'SMTP Test Successful - This is a test email sent via Gmail SMTP using PHPMailer.';
+	$mail->Subject = 'ByteHub SMTP Test (Mailtrap)';
+	$mail->Body    = '<h2>SMTP Test Successful</h2><p>This is a test email sent via Mailtrap SMTP using PHPMailer.</p><p><strong>Note:</strong> Check your Mailtrap <strong>Sandboxes</strong> section, not Email Logs!</p>';
+	$mail->AltBody = 'SMTP Test Successful - This is a test email sent via Mailtrap SMTP using PHPMailer. Check your Mailtrap Sandboxes section, not Email Logs!';
 
 	$mail->send();
 
 	header('Content-Type: text/plain; charset=utf-8');
-	echo "OK: Test email sent to {$toEmail}.\n";
+	echo "OK: Test email sent successfully!\n";
+	echo "Recipient: {$toEmail}\n";
+	echo "SMTP Host: " . MAILTRAP_HOST . "\n";
+	echo "Port: " . MAILTRAP_PORT . "\n";
+	echo "\n";
+	echo "IMPORTANT: Check your Mailtrap 'Sandboxes' section (left sidebar), not 'Email Logs'!\n";
+	echo "Sandbox emails appear in: Sandboxes > Your Inbox\n";
 } catch (\Throwable $e) {
 	header('Content-Type: text/plain; charset=utf-8');
 	http_response_code(500);
 	echo "ERROR: " . $e->getMessage() . "\n";
+	echo "\n";
+	echo "SMTP Configuration:\n";
+	echo "Host: " . MAILTRAP_HOST . "\n";
+	echo "Port: " . MAILTRAP_PORT . "\n";
+	echo "Username: " . MAILTRAP_USER . "\n";
 }
 

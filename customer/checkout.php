@@ -81,11 +81,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $mail->SMTPAuth   = true;
       $mail->Username   = MAILTRAP_USER;
       $mail->Password   = MAILTRAP_PASS;
-      $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+      // Mailtrap sandbox port 2525 doesn't use encryption
+      if (MAILTRAP_PORT != 2525) {
+          $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+      }
       $mail->Port       = MAILTRAP_PORT;
       $mail->CharSet    = 'UTF-8';
 
-      $mail->setFrom(MAILTRAP_USER, 'ByteHub');
+      $mail->setFrom('noreply@bytehub.com', 'ByteHub');
       $mail->addAddress($userData['email'], $userData['username'] ?? '');
 
       $mail->isHTML(true);
