@@ -2,7 +2,6 @@
 include '../includes/db.php';
 include '../includes/functions.php';
 
-// All redirects and checks must happen BEFORE including header.php
 if (!is_logged_in()) {
     redirect('login.php');
 }
@@ -11,13 +10,11 @@ $product_id = $_GET['product_id'] ?? 0;
 $user_id = $_SESSION['user_id'];
 $errors = [];
 
-// Fetch product information
 $product_stmt = $conn->prepare("SELECT p.*, b.name as brand_name FROM products p JOIN brands b ON p.brand_id = b.brand_id WHERE p.product_id = ? AND p.active = 1");
 $product_stmt->bind_param("i", $product_id);
 $product_stmt->execute();
 $product_result = $product_stmt->get_result();
 if ($product_result->num_rows == 0) {
-    // Need to include header before showing error
     include '../includes/header.php';
     echo '<div class="container my-5"><div class="alert alert-danger">Product not found.</div></div>';
     include '../includes/footer.php';
@@ -25,7 +22,6 @@ if ($product_result->num_rows == 0) {
 }
 $product = $product_result->fetch_assoc();
 
-// Check if user already has a review for this product
 $existing_review = $conn->prepare("SELECT review_id FROM reviews WHERE product_id = ? AND user_id = ?");
 $existing_review->bind_param("ii", $product_id, $user_id);
 $existing_review->execute();
@@ -34,7 +30,6 @@ if ($existing_result->num_rows > 0) {
     redirect('product.php?id=' . $product_id);
 }
 
-// Check if user has purchased this product before (any status except Cancelled)
 $stmt = $conn->prepare("
     SELECT o.order_id 
     FROM orders o
@@ -50,18 +45,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rating = (int)$_POST['rating'];
     $comment = trim($_POST['comment']);
     
-    // Validate rating
     if (empty($rating) || $rating < 1 || $rating > 5) {
         $errors[] = 'Please select a valid rating.';
     }
     
-    // Validate comment
     if (empty($comment)) {
         $errors[] = 'Comment is required.';
     }
     
     if (empty($errors)) {
-        // Filter bad words using regex
         $comment = filter_bad_words($comment);
         
         $stmt = $conn->prepare("INSERT INTO reviews (product_id, user_id, rating, comment) VALUES (?, ?, ?, ?)");
@@ -72,10 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Now include header after all redirects are done
 include '../includes/header.php';
 
-// Show error if user hasn't purchased
 if (!$can_review) {
     echo '<div class="container my-5"><div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-2"></i>You can only review products you have purchased.</div></div>';
     include '../includes/footer.php';
@@ -84,7 +74,6 @@ if (!$can_review) {
 ?>
 
 <div class="container my-5">
-    <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="index.php">Home</a></li>
@@ -95,7 +84,6 @@ if (!$can_review) {
 
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <!-- Product Info Card -->
             <div class="review-product-card mb-4">
                 <div class="d-flex align-items-center">
                     <div class="review-product-image">
@@ -113,7 +101,6 @@ if (!$can_review) {
                 </div>
             </div>
 
-            <!-- Review Form Card -->
             <div class="review-form-card">
                 <div class="review-form-header">
                     <h3 class="review-form-title">
@@ -179,7 +166,6 @@ if (!$can_review) {
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

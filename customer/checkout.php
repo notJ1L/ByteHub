@@ -5,21 +5,18 @@ include '../includes/functions.php';
 require_once '../includes/config.php';
 require_once '../vendor/autoload.php';
 
-/* --- Require login --- */
 if (!isset($_SESSION['user_id'])) {
   $_SESSION['login_message'] = 'Please log in to proceed to checkout.';
   $_SESSION['redirect_after_login'] = 'checkout.php';
   redirect('login.php');
 }
 
-/* --- Check for empty cart --- */
 if (empty($_SESSION['cart'])) {
   redirect('cart.php');
 }
 
-/* --- When the form is submitted --- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $user_id = (int)$_SESSION['user_id'];               // use logged-in user ID
+  $user_id = (int)$_SESSION['user_id'];
   $payment_method = $_POST['payment_method'];
   $order_code = 'ORDER-' . rand(1000, 9999);
 
@@ -38,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $tax = round($subtotal * 0.12, 2);
   $total = round($subtotal + $tax, 2);
 
-  /* --- Insert order --- */
   $stmt = $conn->prepare("INSERT INTO orders (user_id, order_code, payment_method, subtotal, tax, total, status) 
                           VALUES (?, ?, ?, ?, ?, ?, 'Pending')");
   $stmt->bind_param('issddd', $user_id, $order_code, $payment_method, $subtotal, $tax, $total);
@@ -46,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $order_id = $stmt->insert_id;
   $stmt->close();
 
-  /* --- Insert order items and update stock --- */
   $result->data_seek(0);
   while ($row = $result->fetch_assoc()) {
     $pid = (int)$row['product_id'];
@@ -63,9 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn->query("UPDATE products SET stock = stock - $qty WHERE product_id = $pid");
   }
 
-  /* --- Send confirmation email to the user (non-blocking) --- */
   try {
-    // Get user email
     $userStmt = $conn->prepare("SELECT email, username FROM users WHERE user_id = ?");
     $userStmt->bind_param('i', $user_id);
     $userStmt->execute();
@@ -74,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userStmt->close();
 
     if ($userData && !empty($userData['email'])) {
-      // Fetch order items for email
       $itemsStmt = $conn->prepare("SELECT name_snapshot, unit_price_snapshot, quantity, line_total FROM order_items WHERE order_id = ?");
       $itemsStmt->bind_param('i', $order_id);
       $itemsStmt->execute();
@@ -92,7 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $mail->SMTPAuth   = true;
       $mail->Username   = MAILTRAP_USER;
       $mail->Password   = MAILTRAP_PASS;
-      // Mailtrap sandbox port 2525 doesn't use encryption
       if (MAILTRAP_PORT != 2525) {
           $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
       }
@@ -105,28 +96,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $mail->isHTML(true);
       $mail->Subject = 'Your ByteHub Order ' . $order_code;
 
-      // Professional HTML email template
       $body  = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
       $body .= '<title>Your ByteHub Order ' . htmlspecialchars($order_code) . '</title>';
       $body .= '</head><body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:24px;">';
       $body .= '<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">';
       
-      // Header
       $body .= '<tr><td style="background:linear-gradient(135deg, #004d26 0%, #1e7a34 100%);color:#ffffff;padding:20px 24px;font-size:22px;font-weight:bold;">ByteHub</td></tr>';
       
-      // Content
       $body .= '<tr><td style="padding:24px;">';
       $body .= '<h2 style="margin:0 0 16px 0;color:#212529;font-size:24px;">Thank you for your order!</h2>';
       $body .= '<p style="margin:0 0 12px 0;color:#495057;font-size:15px;">Hi ' . htmlspecialchars($userData['username'] ?? 'there') . ',</p>';
       $body .= '<p style="margin:0 0 20px 0;color:#495057;font-size:15px;">We\'ve received your order and are getting it ready for you.</p>';
       
-      // Order Code
       $body .= '<div style="background:#f8f9fa;padding:12px 16px;border-radius:6px;margin-bottom:20px;border-left:4px solid #004d26;">';
       $body .= '<strong style="color:#6c757d;font-size:13px;">Order Code:</strong> ';
       $body .= '<span style="color:#004d26;font-weight:bold;font-size:16px;">' . htmlspecialchars($order_code) . '</span>';
       $body .= '</div>';
       
-      // Products List
       $body .= '<h3 style="margin:24px 0 12px 0;color:#212529;font-size:18px;font-weight:600;">Order Items</h3>';
       $body .= '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:20px;">';
       $body .= '<thead><tr style="background:#f8f9fa;">';
@@ -147,7 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       
       $body .= '</tbody></table>';
       
-      // Order Summary
       $body .= '<table cellpadding="0" cellspacing="0" style="width:100%;margin:20px 0;border-collapse:collapse;">';
       $body .= '<tr><td style="padding:8px 0;color:#6c757d;font-size:14px;">Subtotal:</td><td style="padding:8px 0;text-align:right;color:#212529;font-size:14px;">&#8369;' . number_format($subtotal, 2) . '</td></tr>';
       $body .= '<tr><td style="padding:8px 0;color:#6c757d;font-size:14px;">Tax (12%):</td><td style="padding:8px 0;text-align:right;color:#212529;font-size:14px;">&#8369;' . number_format($tax, 2) . '</td></tr>';
@@ -160,11 +145,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $body .= '<p style="margin:0;color:#6c757d;font-size:13px;">If you didn\'t place this order, please contact our support team immediately.</p>';
       $body .= '</td></tr>';
       
-      // Footer
       $body .= '<tr><td style="background:#f1f3f5;padding:16px 24px;text-align:center;font-size:12px;color:#868e96;border-top:1px solid #dee2e6;">&copy; ' . date('Y') . ' ByteHub. All rights reserved.</td></tr>';
       $body .= '</table></body></html>';
 
-      // Plain text alternative
       $altBody = "Thank you for your order at ByteHub!\n\n";
       $altBody .= "Order Code: " . $order_code . "\n\n";
       $altBody .= "Order Items:\n";
@@ -179,11 +162,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $mail->Body    = $body;
       $mail->AltBody = $altBody;
 
-      // Send without breaking checkout flow if it fails
       $mail->send();
     }
   } catch (Throwable $e) {
-    // Fail silently; order placement should not break because of email
   }
 
   $_SESSION['cart'] = [];
@@ -196,13 +177,11 @@ include '../includes/header.php';
 <div class="container my-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <!-- Page Header -->
             <div class="mb-4">
                 <h1 class="display-5 fw-bold text-dark mb-2">Checkout</h1>
                 <p class="text-muted">Review your order and complete your purchase</p>
             </div>
 
-            <!-- Order Summary Card -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white border-bottom">
                     <h5 class="card-title mb-0">
@@ -261,7 +240,6 @@ include '../includes/header.php';
                 </div>
             </div>
 
-            <!-- Checkout Form -->
             <div class="card shadow-sm">
                 <div class="card-header bg-white border-bottom">
                     <h5 class="card-title mb-0">
@@ -305,7 +283,6 @@ include '../includes/header.php';
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

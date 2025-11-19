@@ -6,7 +6,6 @@ $errors = [];
 $email = '';
 $login_message = '';
 
-// Show one-time message when redirected from protected pages
 if (!empty($_SESSION['login_message'])) {
     $login_message = $_SESSION['login_message'];
     unset($_SESSION['login_message']);
@@ -21,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$errors) {
-        // 1) Try to authenticate as a normal/user-table account
         $stmt = $conn->prepare("SELECT user_id, username, password_hash, role, active FROM users WHERE email=? LIMIT 1");
         $stmt->bind_param('s', $email);
         $stmt->execute();
@@ -35,7 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id'] = (int)$row['user_id'];
                 $_SESSION['username'] = $row['username'];
 
-                // If this user has admin role, also log them into the admin panel
                 if (isset($row['role']) && $row['role'] === 'admin') {
                     $_SESSION['admin_id'] = (int)$row['user_id'];
                     $_SESSION['admin_email'] = $email;
@@ -51,7 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
         }
 
-        // 2) If no user (or password invalid), try admin table so admin can log in here too
         if (!$errors) {
             $adminStmt = $conn->prepare("SELECT admin_id, email, password_hash FROM admin WHERE email = ? LIMIT 1");
             $adminStmt->bind_param('s', $email);
@@ -70,7 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $adminStmt->close();
         }
 
-        // If we get here, authentication failed
         if (!$errors) {
             $errors[] = 'Invalid credentials.';
         }
@@ -83,9 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="container">
         <div class="row justify-content-center align-items-center min-vh-100 py-5">
             <div class="col-lg-5 col-md-7">
-                <!-- Login Card -->
                 <div class="auth-card">
-                    <!-- Header -->
                     <div class="auth-header text-center mb-4">
                         <div class="auth-icon mb-3">
                             <i class="bi bi-box-arrow-in-right"></i>
@@ -94,7 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p class="auth-subtitle">Sign in to your ByteHub account</p>
                     </div>
 
-                    <!-- Error Messages -->
                     <?php if ($login_message): ?>
                         <div class="alert alert-info alert-dismissible fade show" role="alert">
                             <i class="bi bi-info-circle-fill me-2"></i>
@@ -116,7 +108,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     <?php endif; ?>
 
-                    <!-- Login Form -->
                     <form method="post" class="auth-form">
                         <div class="mb-4">
                             <label for="email" class="form-label fw-semibold">
@@ -165,7 +156,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </form>
 
-                    <!-- Footer -->
                     <div class="auth-footer text-center">
                         <p class="mb-0">
                             Don't have an account? 
@@ -174,7 +164,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
-                <!-- Additional Info -->
                 <div class="text-center mt-4">
                     <a href="index.php" class="text-muted text-decoration-none">
                         <i class="bi bi-arrow-left me-1"></i>Back to Store
@@ -185,7 +174,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

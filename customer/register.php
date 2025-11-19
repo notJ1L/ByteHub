@@ -13,7 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm  = $_POST['confirm'] ?? '';
     $photoName = null;
 
-    // Basic validation
     if ($username === '' || $email === '' || $password === '' || $confirm === '') {
         $errors[] = 'All fields are required.';
     }
@@ -24,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Passwords do not match.';
     }
 
-    // Validate uploaded photo
     if (!empty($_FILES['photo']['name'])) {
         $allowed = ['jpg','jpeg','png','gif','webp'];
         $ext = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
@@ -34,7 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Check if email exists
     if (!$errors) {
         $stmt = $conn->prepare("SELECT user_id FROM users WHERE email=? LIMIT 1");
         $stmt->bind_param('s', $email);
@@ -47,7 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$errors) {
-        // Handle photo upload
         if (!empty($_FILES['photo']['name'])) {
             $photoName = time() . '_' . $_FILES['photo']['name'];
             $uploadPath = "../uploads/users/" . $photoName;
@@ -56,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
 
-        // INSERT with new columns: photo, active, role
         $stmt = $conn->prepare("
             INSERT INTO users (username, email, password_hash, photo, active, role) 
             VALUES (?, ?, ?, ?, 1, 'user')
@@ -80,9 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="container">
         <div class="row justify-content-center align-items-center min-vh-100 py-5">
             <div class="col-lg-6 col-md-8">
-                <!-- Registration Card -->
                 <div class="auth-card">
-                    <!-- Header -->
                     <div class="auth-header text-center mb-4">
                         <div class="auth-icon mb-3">
                             <i class="bi bi-person-plus-fill"></i>
@@ -91,7 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p class="auth-subtitle">Join ByteHub and start shopping today</p>
                     </div>
 
-                    <!-- Error Messages -->
                     <?php if ($errors): ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i>
@@ -105,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     <?php endif; ?>
 
-                    <!-- Registration Form -->
                     <form method="post" enctype="multipart/form-data" class="auth-form">
                         <div class="row">
                             <div class="col-md-6 mb-4">
@@ -208,7 +199,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                             <div class="form-text">JPG, PNG, GIF or WEBP. Max 5MB.</div>
                             
-                            <!-- Photo Preview -->
                             <div id="photoPreview" class="mt-3 text-center" style="display: none;">
                                 <img id="previewImg" src="" alt="Preview" class="img-thumbnail rounded-circle" style="width: 120px; height: 120px; object-fit: cover;">
                             </div>
@@ -221,7 +211,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </form>
 
-                    <!-- Footer -->
                     <div class="auth-footer text-center">
                         <p class="mb-0">
                             Already have an account? 
@@ -230,7 +219,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
-                <!-- Additional Info -->
                 <div class="text-center mt-4">
                     <a href="index.php" class="text-muted text-decoration-none">
                         <i class="bi bi-arrow-left me-1"></i>Back to Store
@@ -241,7 +229,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

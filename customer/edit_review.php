@@ -11,7 +11,6 @@ $review_id = $_GET['id'];
 $user_id = $_SESSION['user_id'];
 $errors = [];
 
-// Fetch the review and ensure it belongs to the current user
 $stmt = $conn->prepare("SELECT * FROM reviews WHERE review_id = ? AND user_id = ?");
 $stmt->bind_param("ii", $review_id, $user_id);
 $stmt->execute();
@@ -26,18 +25,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rating = (int)$_POST['rating'];
     $comment = trim($_POST['comment']);
     
-    // Validate rating
     if (empty($rating) || $rating < 1 || $rating > 5) {
         $errors[] = 'Please select a valid rating.';
     }
     
-    // Validate comment
     if (empty($comment)) {
         $errors[] = 'Comment is required.';
     }
     
     if (empty($errors)) {
-        // Filter bad words using regex
         $comment = filter_bad_words($comment);
         
         $stmt = $conn->prepare("UPDATE reviews SET rating = ?, comment = ? WHERE review_id = ?");

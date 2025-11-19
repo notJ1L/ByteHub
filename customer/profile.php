@@ -11,7 +11,6 @@ $user_id = $_SESSION['user_id'];
 $errors = [];
 $success = "";
 
-// Fetch current user info
 $sql = "SELECT username, email, photo FROM users WHERE user_id = $user_id LIMIT 1";
 $user = $conn->query($sql)->fetch_assoc();
 
@@ -34,7 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Invalid email format.";
     }
 
-    // Handle password change only if provided
     $updatePassword = false;
     if ($password !== '' || $confirm !== '') {
         if ($password !== $confirm) {
@@ -45,8 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Handle photo upload
-    $newPhotoName = $photo; // Keep old photo if none uploaded
+    $newPhotoName = $photo;
     if (!empty($_FILES['photo']['name'])) {
         $ext = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
         $allowed = ['jpg','jpeg','png','gif','webp'];
@@ -89,13 +86,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="container my-5">
     <div class="row justify-content-center">
         <div class="col-lg-10">
-            <!-- Page Header -->
             <div class="mb-4">
                 <h1 class="display-5 fw-bold text-dark mb-2">My Profile</h1>
                 <p class="text-muted">Manage your account settings and preferences</p>
             </div>
 
-            <!-- Success/Error Messages -->
             <?php if ($success): ?>
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     <i class="bi bi-check-circle-fill me-2"></i><?php echo htmlspecialchars($success); ?>
@@ -118,13 +113,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <form method="POST" enctype="multipart/form-data">
                 <div class="row">
-                    <!-- Profile Photo Section -->
                     <div class="col-md-4 mb-4">
                         <div class="card shadow-sm h-100">
                             <div class="card-body text-center">
                                 <h5 class="card-title mb-4">Profile Photo</h5>
                                 
-                                <!-- Current Photo Display -->
                                 <div class="mb-4">
                                     <div class="profile-photo-container position-relative d-inline-block">
                                         <?php if ($photo): ?>
@@ -143,7 +136,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                 </div>
 
-                                <!-- File Upload -->
                                 <div class="mb-3">
                                     <label for="photo" class="form-label fw-semibold">Upload New Photo</label>
                                     <input type="file" 
@@ -155,7 +147,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <div class="form-text">JPG, PNG, GIF or WEBP. Max 5MB.</div>
                                 </div>
 
-                                <!-- Photo Preview (hidden initially) -->
                                 <div id="photoPreview" class="mt-3" style="display: none;">
                                     <img id="previewImg" src="" alt="Preview" class="img-thumbnail rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
                                 </div>
@@ -163,7 +154,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
 
-                    <!-- Account Information Section -->
                     <div class="col-md-8">
                         <div class="card shadow-sm">
                             <div class="card-header bg-white border-bottom">
@@ -172,7 +162,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </h5>
                             </div>
                             <div class="card-body">
-                                <!-- Username -->
                                 <div class="mb-4">
                                     <label for="username" class="form-label fw-semibold">
                                         <i class="bi bi-person me-2"></i>Username
@@ -186,7 +175,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                            placeholder="Enter your username">
                                 </div>
 
-                                <!-- Email -->
                                 <div class="mb-4">
                                     <label for="email" class="form-label fw-semibold">
                                         <i class="bi bi-envelope me-2"></i>Email Address
@@ -202,7 +190,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 <hr class="my-4">
 
-                                <!-- Password Section -->
                                 <div class="mb-3">
                                     <h6 class="fw-semibold mb-3">
                                         <i class="bi bi-lock me-2"></i>Change Password
@@ -210,7 +197,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </h6>
                                 </div>
 
-                                <!-- New Password -->
                                 <div class="mb-3">
                                     <label for="password" class="form-label fw-semibold">New Password</label>
                                     <div class="input-group">
@@ -227,7 +213,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                 </div>
 
-                                <!-- Confirm Password -->
                                 <div class="mb-4">
                                     <label for="confirm" class="form-label fw-semibold">Confirm New Password</label>
                                     <div class="input-group">
@@ -244,7 +229,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                 </div>
 
-                                <!-- Submit Button -->
                                 <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                                     <button type="submit" class="btn btn-primary-green btn-lg px-5">
                                         <i class="bi bi-check-circle me-2"></i>Update Profile
@@ -259,7 +243,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

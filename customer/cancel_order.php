@@ -9,9 +9,7 @@ if (!is_logged_in()) {
 $user_id = $_SESSION['user_id'];
 $order_id = $_GET['id'] ?? 0;
 
-// Process POST request FIRST (before any output)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_cancel'])) {
-    // Verify the order belongs to the logged-in user and can be cancelled
     $order = $conn->query("
         SELECT * FROM orders 
         WHERE order_id = $order_id AND user_id = $user_id
@@ -22,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_cancel'])) {
         redirect('myorders.php');
     }
     
-    // Only allow cancellation of Pending or Processing orders
     if (!in_array($order['status'], ['Pending', 'Processing'])) {
         $_SESSION['error'] = "This order cannot be cancelled. Only Pending or Processing orders can be cancelled.";
         redirect('myorders_view.php?id=' . $order_id);
@@ -40,7 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_cancel'])) {
     }
 }
 
-// Verify the order belongs to the logged-in user and can be cancelled (for display)
 $order = $conn->query("
     SELECT * FROM orders 
     WHERE order_id = $order_id AND user_id = $user_id
@@ -51,13 +47,11 @@ if (!$order) {
     redirect('myorders.php');
 }
 
-// Only allow cancellation of Pending or Processing orders
 if (!in_array($order['status'], ['Pending', 'Processing'])) {
     $_SESSION['error'] = "This order cannot be cancelled. Only Pending or Processing orders can be cancelled.";
     redirect('myorders_view.php?id=' . $order_id);
 }
 
-// Now include header (after all redirects are handled)
 include '../includes/header.php';
 ?>
 
@@ -96,7 +90,6 @@ include '../includes/header.php';
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

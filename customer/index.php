@@ -3,7 +3,6 @@ include '../includes/db.php';
 include '../includes/header.php';
 ?>
 
-<!-- Hero Section -->
 <div class="hero-section mb-0">
     <div class="hero-background-pattern"></div>
     <div class="container">
@@ -50,7 +49,6 @@ include '../includes/header.php';
 </div>
 
 <div class="container my-5">
-    <!-- Featured Products Section -->
     <div id="featured-products" class="mb-5">
         <div class="section-header mb-4">
             <h2 class="section-title">
@@ -106,7 +104,6 @@ include '../includes/header.php';
         </div>
     </div>
 
-    <!-- New Arrivals Section -->
     <div class="mt-5 mb-5">
         <div class="section-header mb-4">
             <h2 class="section-title">
@@ -163,7 +160,6 @@ include '../includes/header.php';
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

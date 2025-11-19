@@ -18,7 +18,6 @@ if ($result && $result->num_rows > 0) {
     $gallery_stmt->execute();
     $gallery = $gallery_stmt->get_result();
     
-    // Fetch reviews
     $reviews_stmt = $conn->prepare("
         SELECT r.*, u.username 
         FROM reviews r 
@@ -30,7 +29,6 @@ if ($result && $result->num_rows > 0) {
     $reviews_stmt->execute();
     $reviews_result = $reviews_stmt->get_result();
     
-    // Calculate average rating
     $avg_rating_stmt = $conn->prepare("SELECT AVG(rating) as avg_rating, COUNT(*) as total_reviews FROM reviews WHERE product_id = ?");
     $avg_rating_stmt->bind_param('i', $id);
     $avg_rating_stmt->execute();
@@ -39,7 +37,6 @@ if ($result && $result->num_rows > 0) {
     $avg_rating = $avg_data['avg_rating'] ? round($avg_data['avg_rating'], 1) : 0;
     $total_reviews = $avg_data['total_reviews'];
     
-    // Check if user can review
     $can_review = false;
     $user_has_review = false;
     $user_review_id = null;
@@ -69,7 +66,6 @@ if ($result && $result->num_rows > 0) {
 ?>
 
 <div class="container my-5">
-    <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="index.php">Home</a></li>
@@ -81,7 +77,6 @@ if ($result && $result->num_rows > 0) {
     </nav>
 
     <div class="row g-4 mb-5">
-        <!-- Product Images -->
         <div class="col-lg-6">
             <div class="product-image-container">
                 <div class="main-image-wrapper">
@@ -116,7 +111,6 @@ if ($result && $result->num_rows > 0) {
             </div>
         </div>
 
-        <!-- Product Info -->
         <div class="col-lg-6">
             <div class="product-info">
                 <div class="product-brand-category mb-3">
@@ -134,7 +128,6 @@ if ($result && $result->num_rows > 0) {
                     </p>
                 <?php endif; ?>
                 
-                <!-- Rating Display -->
                 <?php if ($total_reviews > 0): ?>
                     <div class="product-rating mb-3">
                         <div class="d-flex align-items-center">
@@ -174,7 +167,6 @@ if ($result && $result->num_rows > 0) {
                     <?php endif; ?>
                 </div>
 
-                <!-- Add to Cart Section -->
                 <?php if ($p['stock'] > 0): ?>
                     <form method="post" action="cart.php" class="product-actions-form">
                         <input type="hidden" name="id" value="<?php echo $p['product_id']; ?>">
@@ -221,9 +213,7 @@ if ($result && $result->num_rows > 0) {
         </div>
     </div>
 
-    <!-- Product Details Sections -->
     <div class="product-details-sections">
-        <!-- Description Section -->
         <?php if (!empty($p['description'])): ?>
         <div class="product-section-card">
             <div class="section-header">
@@ -237,7 +227,6 @@ if ($result && $result->num_rows > 0) {
         </div>
         <?php endif; ?>
         
-        <!-- Specifications Section -->
         <?php
         $specs = $p['specifications'];
         if (!empty($specs)):
@@ -294,7 +283,6 @@ if ($result && $result->num_rows > 0) {
         </div>
         <?php endif; ?>
         
-        <!-- Reviews Section -->
         <div class="product-section-card">
             <div class="section-header">
                 <h3 class="section-title">
@@ -323,7 +311,6 @@ if ($result && $result->num_rows > 0) {
                     </div>
                 <?php endif; ?>
                 
-                <!-- Add Review Form -->
                 <?php if (is_logged_in()): ?>
                     <?php if ($can_review && !$user_has_review): ?>
                         <div class="add-review-compact">
@@ -362,7 +349,6 @@ if ($result && $result->num_rows > 0) {
                     </div>
                 <?php endif; ?>
                 
-                <!-- Reviews List -->
                 <div class="reviews-list-compact">
                     <?php if ($reviews_result->num_rows > 0): ?>
                         <?php while ($review = $reviews_result->fetch_assoc()): ?>
@@ -414,7 +400,6 @@ if ($result && $result->num_rows > 0) {
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>
@@ -644,7 +629,6 @@ if ($result && $result->num_rows > 0) {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Modern Product Details Sections */
 .product-details-sections {
     display: flex;
     flex-direction: column;
@@ -738,7 +722,6 @@ if ($result && $result->num_rows > 0) {
     border-bottom-right-radius: 8px;
 }
 
-/* Rating Summary */
 .rating-summary-compact {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-radius: 10px;
@@ -776,7 +759,6 @@ if ($result && $result->num_rows > 0) {
     font-size: 0.875rem;
 }
 
-/* Add Review Form */
 .add-review-compact {
     background: #f8f9fa;
     border-radius: 10px;
@@ -826,7 +808,6 @@ if ($result && $result->num_rows > 0) {
     opacity: 1 !important;
 }
 
-/* Reviews List */
 .reviews-list-compact {
     display: flex;
     flex-direction: column;
@@ -943,7 +924,6 @@ if ($result && $result->num_rows > 0) {
 <script>
 function changeImage(src) {
     document.getElementById("mainProductImage").src = src;
-    // Update active thumbnail
     document.querySelectorAll('.thumbnail-image').forEach(img => {
         img.classList.remove('active');
         if (img.src === src) {

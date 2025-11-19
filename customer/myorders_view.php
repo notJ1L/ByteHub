@@ -10,7 +10,6 @@ if (!is_logged_in()) {
 $user_id = $_SESSION['user_id'];
 $order_id = $_GET['id'] ?? 0;
 
-// Verify the order belongs to the logged-in user
 $order = $conn->query("
     SELECT o.*, u.username, u.email 
     FROM orders o
@@ -55,7 +54,6 @@ function getStatusIcon($status) {
 <div class="container my-5">
     <div class="row">
         <div class="col-12">
-            <!-- Page Header -->
             <div class="mb-4">
                 <a href="myorders.php" class="btn btn-outline-secondary mb-3">
                     <i class="bi bi-arrow-left me-2"></i>Back to Orders
@@ -65,7 +63,6 @@ function getStatusIcon($status) {
             </div>
 
             <div class="row g-4">
-                <!-- Order Information -->
                 <div class="col-lg-4">
                     <div class="card shadow-sm">
                         <div class="card-header bg-white border-bottom">
@@ -102,7 +99,6 @@ function getStatusIcon($status) {
                                 <h3 class="text-primary-green mb-0">₱<?php echo number_format($order['total'], 2); ?></h3>
                             </div>
                             
-                            <!-- Cancel Order Button (only for Pending/Processing orders) -->
                             <?php if (in_array($order['status'], ['Pending', 'Processing'])): ?>
                                 <hr>
                                 <div class="d-grid">
@@ -117,7 +113,6 @@ function getStatusIcon($status) {
                     </div>
                 </div>
 
-                <!-- Order Items -->
                 <div class="col-lg-8">
                     <div class="card shadow-sm">
                         <div class="card-header bg-white border-bottom">
@@ -168,7 +163,6 @@ function getStatusIcon($status) {
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

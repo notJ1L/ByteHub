@@ -4,7 +4,6 @@ include '../includes/header.php';
 
 $keyword = $_GET['q'] ?? '';
 
-// Prepare search query with proper escaping
 $search_term = '%' . $keyword . '%';
 $stmt = $conn->prepare("SELECT p.*, b.name as brand_name, c.name as category_name 
                         FROM products p 
@@ -19,7 +18,6 @@ $result = $stmt->get_result();
 ?>
 
 <div class="container my-5">
-    <!-- Search Header -->
     <div class="search-header mb-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
@@ -40,7 +38,6 @@ $result = $stmt->get_result();
             </div>
         </div>
         
-        <!-- Search Bar -->
         <div class="search-bar-modern">
             <form action="search.php" method="GET" class="search-form">
                 <div class="input-group input-group-lg">
@@ -61,7 +58,6 @@ $result = $stmt->get_result();
         </div>
     </div>
 
-    <!-- Search Results -->
     <?php if ($result->num_rows > 0): ?>
         <div class="row g-4">
             <?php while ($row = $result->fetch_assoc()): ?>
@@ -141,7 +137,6 @@ $result = $stmt->get_result();
     <?php endif; ?>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

@@ -4,7 +4,6 @@ include '../includes/header.php';
 
 $category_slug = $_GET['cat'] ?? '';
 
-// Fetch category details
 $cat_stmt = $conn->prepare("SELECT * FROM categories WHERE slug = ?");
 $cat_stmt->bind_param('s', $category_slug);
 $cat_stmt->execute();
@@ -16,7 +15,6 @@ if (!$category) {
     exit;
 }
 
-// Filtering and Sorting
 $where_clauses = ['p.category_id = ?', 'p.active = 1'];
 $params = [$category['category_id']];
 $types = 'i';
@@ -60,13 +58,11 @@ if ($params) {
 $stmt->execute();
 $products = $stmt->get_result();
 
-// Fetch brands for filtering
 $brands_stmt = $conn->prepare("SELECT DISTINCT b.* FROM brands b JOIN products p ON b.brand_id = p.brand_id WHERE p.category_id = ? AND b.active = 1 AND p.active = 1");
 $brands_stmt->bind_param('i', $category['category_id']);
 $brands_stmt->execute();
 $brands = $brands_stmt->get_result();
 
-// Get price range
 $price_range_stmt = $conn->prepare("SELECT MIN(price) as min_price, MAX(price) as max_price FROM products WHERE category_id = ? AND active = 1");
 $price_range_stmt->bind_param('i', $category['category_id']);
 $price_range_stmt->execute();
@@ -74,14 +70,12 @@ $price_range = $price_range_stmt->get_result()->fetch_assoc();
 ?>
 
 <div class="container my-5">
-    <!-- Category Header -->
     <div class="category-header mb-4">
         <h1 class="category-title"><?php echo htmlspecialchars($category['name']); ?></h1>
         <p class="category-description text-muted">Explore our collection of <?php echo strtolower(htmlspecialchars($category['name'])); ?> products</p>
     </div>
 
     <div class="row">
-        <!-- Modern Filter Sidebar -->
         <div class="col-lg-3 mb-4">
             <div class="filter-sidebar-modern">
                 <div class="filter-header">
@@ -96,7 +90,6 @@ $price_range = $price_range_stmt->get_result()->fetch_assoc();
                 <form method="GET" id="filterForm">
                     <input type="hidden" name="cat" value="<?php echo htmlspecialchars($category_slug); ?>">
                     
-                    <!-- Price Range Filter -->
                     <div class="filter-section">
                         <h6 class="filter-section-title">
                             <i class="bi bi-currency-dollar me-2"></i>Price Range
@@ -130,7 +123,6 @@ $price_range = $price_range_stmt->get_result()->fetch_assoc();
                         <?php endif; ?>
                     </div>
 
-                    <!-- Brand Filter -->
                     <div class="filter-section">
                         <h6 class="filter-section-title">
                             <i class="bi bi-building me-2"></i>Brands
@@ -164,9 +156,7 @@ $price_range = $price_range_stmt->get_result()->fetch_assoc();
             </div>
         </div>
 
-        <!-- Product Grid -->
         <div class="col-lg-9">
-            <!-- Sort and View Options -->
             <div class="product-toolbar mb-4">
                 <div class="product-count">
                     <strong><?php echo $products->num_rows; ?></strong> product(s) found
@@ -199,7 +189,6 @@ $price_range = $price_range_stmt->get_result()->fetch_assoc();
                 </form>
             </div>
 
-            <!-- Products Grid -->
             <?php if ($products->num_rows > 0): ?>
                 <div class="row g-4">
                     <?php while ($product = $products->fetch_assoc()): ?>
@@ -259,7 +248,6 @@ $price_range = $price_range_stmt->get_result()->fetch_assoc();
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>
