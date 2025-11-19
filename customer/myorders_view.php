@@ -8,26 +8,65 @@ if (!is_logged_in()) {
 }
 
 $user_id = $_SESSION['user_id'];
-$order_id = $_GET['id'] ?? 0;
+$order_id = (int)($_GET['id'] ?? 0);
 
-// Verify the order belongs to the logged-in user
-$order = $conn->query("
-    SELECT o.*, u.username, u.email 
-    FROM orders o
-    LEFT JOIN users u ON o.user_id = u.user_id
-    WHERE o.order_id = $order_id AND o.user_id = $user_id
-")->fetch_assoc();
+// First verify the order belongs to the logged-in user
+$verify_stmt = $conn->prepare("SELECT order_id FROM orders WHERE order_id = ? AND user_id = ?");
+$verify_stmt->bind_param('ii', $order_id, $user_id);
+$verify_stmt->execute();
+$verify_result = $verify_stmt->get_result();
 
-if (!$order) {
+if ($verify_result->num_rows == 0) {
     echo '<div class="container my-5"><div class="alert alert-danger">Order not found or you do not have permission to view this order.</div></div>';
     include '../includes/footer.php';
     exit;
 }
 
-$items = $conn->query("
-    SELECT * FROM order_items 
-    WHERE order_id = $order_id
+// Use MySQL view for order details
+$order_stmt = $conn->prepare("
+    SELECT DISTINCT 
+        order_id,
+        order_code,
+        status,
+        order_date,
+        username,
+        email
+    FROM order_details_view 
+    WHERE order_id = ?
+    LIMIT 1
 ");
+$order_stmt->bind_param('i', $order_id);
+$order_stmt->execute();
+$order = $order_stmt->get_result()->fetch_assoc();
+
+if (!$order) {
+    echo '<div class="container my-5"><div class="alert alert-danger">Order not found.</div></div>';
+    include '../includes/footer.php';
+    exit;
+}
+
+// Get order totals and other details from orders table (not in view)
+$totals_stmt = $conn->prepare("SELECT subtotal, tax, total, created_at, payment_method FROM orders WHERE order_id = ? AND user_id = ?");
+$totals_stmt->bind_param('ii', $order_id, $user_id);
+$totals_stmt->execute();
+$totals = $totals_stmt->get_result()->fetch_assoc();
+
+// Merge totals with order data
+$order = array_merge($order, $totals);
+
+// Get order items from view
+$items_stmt = $conn->prepare("
+    SELECT 
+        product_name,
+        quantity,
+        unit_price_snapshot,
+        line_total
+    FROM order_details_view 
+    WHERE order_id = ?
+");
+$items_stmt->bind_param('i', $order_id);
+$items_stmt->execute();
+$items = $items_stmt->get_result();
 
 function getStatusBadge($status) {
     $badges = [
@@ -140,7 +179,7 @@ function getStatusIcon($status) {
                                     <?php while($item = $items->fetch_assoc()): ?>
                                         <tr>
                                             <td class="ps-4">
-                                                <strong><?php echo htmlspecialchars($item['name_snapshot']); ?></strong>
+                                                <strong><?php echo htmlspecialchars($item['product_name']); ?></strong>
                                             </td>
                                             <td>₱<?php echo number_format($item['unit_price_snapshot'], 2); ?></td>
                                             <td><?php echo $item['quantity']; ?></td>

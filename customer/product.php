@@ -20,7 +20,7 @@ if ($result && $result->num_rows > 0) {
     
     // Fetch reviews
     $reviews_stmt = $conn->prepare("
-        SELECT r.*, u.username 
+        SELECT r.*, u.username, u.photo 
         FROM reviews r 
         JOIN users u ON r.user_id = u.user_id 
         WHERE r.product_id = ? 
@@ -370,7 +370,14 @@ if ($result && $result->num_rows > 0) {
                                 <div class="review-header-compact">
                                     <div class="reviewer-info-compact">
                                         <div class="reviewer-avatar-compact">
-                                            <i class="bi bi-person-circle"></i>
+                                            <?php if (!empty($review['photo'])): ?>
+                                                <img src="/bytehub/uploads/users/<?php echo htmlspecialchars($review['photo']); ?>" 
+                                                     alt="<?php echo htmlspecialchars($review['username']); ?>" 
+                                                     class="reviewer-avatar-img"
+                                                     onerror="this.onerror=null; this.parentElement.innerHTML='<i class=&quot;bi bi-person-circle&quot;></i>';">
+                                            <?php else: ?>
+                                                <i class="bi bi-person-circle"></i>
+                                            <?php endif; ?>
                                         </div>
                                         <div>
                                             <h6 class="reviewer-name-compact mb-0"><?php echo htmlspecialchars($review['username']); ?></h6>
@@ -872,6 +879,15 @@ if ($result && $result->num_rows > 0) {
     color: white;
     font-size: 1.5rem;
     flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.reviewer-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .reviewer-name-compact {
