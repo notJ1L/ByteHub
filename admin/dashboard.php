@@ -9,7 +9,6 @@ if (!isset($_SESSION['admin_id'])) {
 
 include __DIR__ . '/../includes/admin_header.php';
 
-// Fetch stats
 $prod_count = $conn->query("SELECT COUNT(*) AS c FROM products")->fetch_assoc()['c'];
 $user_count = $conn->query("SELECT COUNT(*) AS c FROM users")->fetch_assoc()['c'];
 $order_count = $conn->query("SELECT COUNT(*) AS c FROM orders")->fetch_assoc()['c'];
@@ -20,7 +19,6 @@ $completed_orders = $conn->query("SELECT COUNT(*) AS completed_orders FROM order
 ?>
 
 <div class="admin-content">
-    <!-- Page Header -->
     <div class="page-header mb-4">
         <div>
             <h1 class="page-title">Dashboard</h1>
@@ -31,7 +29,6 @@ $completed_orders = $conn->query("SELECT COUNT(*) AS completed_orders FROM order
         </div>
     </div>
 
-    <!-- Stats Cards -->
     <div class="row g-4 mb-4">
         <div class="col-xl-3 col-md-6">
             <div class="stat-card stat-card-primary">
@@ -94,7 +91,6 @@ $completed_orders = $conn->query("SELECT COUNT(*) AS completed_orders FROM order
         </div>
     </div>
 
-    <!-- Secondary Stats -->
     <div class="row g-4">
         <div class="col-xl-4 col-md-6">
             <div class="stat-card">
@@ -143,7 +139,6 @@ $completed_orders = $conn->query("SELECT COUNT(*) AS completed_orders FROM order
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

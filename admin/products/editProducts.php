@@ -53,21 +53,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param("ssdiiiiisssi", $name, $model, $price, $stock, $featured, $new_arrival, $active, $category_id, $brand_id, $description, $specs, $product_id);
     $stmt->execute();
 
-    // Ensure uploads directory exists
     $uploadDir = "../../uploads/products/";
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0755, true);
     }
 
-    // Allowed image types
     $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    $maxFileSize = 5 * 1024 * 1024; // 5MB
+    $maxFileSize = 5 * 1024 * 1024;
 
     if (!empty($_FILES['image']['name']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        // Validate file type
         $fileType = mime_content_type($_FILES['image']['tmp_name']);
         if (in_array($fileType, $allowedTypes) && $_FILES['image']['size'] <= $maxFileSize) {
-            // Generate unique filename
             $fileExtension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
             $mainImage = uniqid('main_', true) . '_' . time() . '.' . $fileExtension;
             $target = $uploadDir . $mainImage;
@@ -84,17 +80,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!empty($_FILES['images']['name'][0])) {
         foreach ($_FILES['images']['name'] as $key => $filename) {
             if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
-                // Validate file type
                 $fileType = mime_content_type($_FILES['images']['tmp_name'][$key]);
                 if (!in_array($fileType, $allowedTypes)) {
-                    continue; // Skip invalid files
+                    continue;
                 }
                 
                 if ($_FILES['images']['size'][$key] > $maxFileSize) {
-                    continue; // Skip files that are too large
+                    continue;
                 }
 
-                // Generate unique filename
                 $fileExtension = pathinfo($filename, PATHINFO_EXTENSION);
                 $imgName = uniqid('img_', true) . '_' . time() . '_' . $key . '.' . $fileExtension;
                 $uploadPath = $uploadDir . $imgName;
@@ -124,7 +118,6 @@ include '../../includes/admin_header.php';
 
 <div class="admin-content">
     <div class="container-fluid">
-        <!-- Page Header -->
         <div class="page-header mb-4">
             <div>
                 <h2 class="page-title">
@@ -141,7 +134,6 @@ include '../../includes/admin_header.php';
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
                     <div class="row g-4">
-                        <!-- Basic Information -->
                         <div class="col-12">
                             <h5 class="section-title mb-3">
                                 <i class="bi bi-info-circle me-2"></i>Basic Information
@@ -228,7 +220,6 @@ include '../../includes/admin_header.php';
                             </div>
                         </div>
 
-                        <!-- Description -->
                         <div class="col-12">
                             <hr class="my-3">
                             <h5 class="section-title mb-3">
@@ -246,7 +237,6 @@ include '../../includes/admin_header.php';
                             <textarea name="specifications" rows="6" class="form-control"><?= htmlspecialchars($product['specifications'] ?? '') ?></textarea>
                         </div>
 
-                        <!-- Images -->
                         <div class="col-12">
                             <hr class="my-3">
                             <h5 class="section-title mb-3">
@@ -274,7 +264,6 @@ include '../../includes/admin_header.php';
                             <small class="text-muted">You can select multiple images</small>
                         </div>
 
-                        <!-- Existing Additional Images -->
                         <?php if ($moreImages->num_rows > 0): ?>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Existing Additional Images</label>
@@ -301,7 +290,6 @@ include '../../includes/admin_header.php';
                             </div>
                         <?php endif; ?>
 
-                        <!-- Submit Buttons -->
                         <div class="col-12">
                             <hr class="my-3">
                             <div class="d-flex gap-2">
@@ -320,7 +308,6 @@ include '../../includes/admin_header.php';
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

@@ -16,7 +16,6 @@ if (isset($_POST['save'])) {
     $slug = trim($_POST['slug']);
     $active = (int)$_POST['active'];
 
-    // Validation
     if (empty($name)) {
         $errors[] = "Brand name is required.";
     }
@@ -24,7 +23,6 @@ if (isset($_POST['save'])) {
         $errors[] = "Slug is required.";
     }
 
-    // Check if slug already exists
     if (empty($errors)) {
         $checkStmt = $conn->prepare("SELECT brand_id FROM brands WHERE slug = ?");
         $checkStmt->bind_param("s", $slug);
@@ -56,7 +54,6 @@ include '../../includes/admin_header.php';
 
 <div class="admin-content">
     <div class="container-fluid">
-        <!-- Page Header -->
         <div class="page-header mb-4">
             <div>
                 <h2 class="page-title">
@@ -126,7 +123,6 @@ include '../../includes/admin_header.php';
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

@@ -123,6 +123,7 @@ $price_range = $price_range_stmt->get_result()->fetch_assoc();
                         <?php endif; ?>
                     </div>
 
+                    <!-- Brand Filter -->
                     <div class="filter-section">
                         <h6 class="filter-section-title">
                             <i class="bi bi-building me-2"></i>Brands

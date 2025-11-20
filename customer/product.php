@@ -167,6 +167,7 @@ if ($result && $result->num_rows > 0) {
                     <?php endif; ?>
                 </div>
 
+                <!-- Add to Cart Section -->
                 <?php if ($p['stock'] > 0): ?>
                     <form method="post" action="cart.php" class="product-actions-form">
                         <input type="hidden" name="id" value="<?php echo $p['product_id']; ?>">
@@ -629,6 +630,7 @@ if ($result && $result->num_rows > 0) {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+/* Modern Product Details Sections */
 .product-details-sections {
     display: flex;
     flex-direction: column;
@@ -722,6 +724,7 @@ if ($result && $result->num_rows > 0) {
     border-bottom-right-radius: 8px;
 }
 
+/* Rating Summary */
 .rating-summary-compact {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-radius: 10px;
@@ -759,6 +762,7 @@ if ($result && $result->num_rows > 0) {
     font-size: 0.875rem;
 }
 
+/* Add Review Form */
 .add-review-compact {
     background: #f8f9fa;
     border-radius: 10px;
@@ -808,6 +812,7 @@ if ($result && $result->num_rows > 0) {
     opacity: 1 !important;
 }
 
+/* Reviews List */
 .reviews-list-compact {
     display: flex;
     flex-direction: column;

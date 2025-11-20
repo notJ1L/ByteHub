@@ -19,7 +19,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $role     = $_POST['role'];
     $active   = $_POST['active'];
 
-    // Validation
     if (empty($username)) {
         $errors[] = "Username is required.";
     }
@@ -34,7 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Password must be at least 6 characters long.";
     }
 
-    // Check if email already exists
     if (empty($errors)) {
         $checkStmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
         $checkStmt->bind_param("s", $email);
@@ -49,13 +47,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         $photoName = null;
 
-        // Ensure uploads directory exists
         $uploadDir = "../../uploads/users/";
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
 
-        // Upload photo
         if (!empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
             $photoName = time() . "_" . $_FILES['photo']['name'];
             $target = $uploadDir . $photoName;

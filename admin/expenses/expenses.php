@@ -40,7 +40,6 @@ if ($stmt) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 
-// Calculate total expenses
 $total_expenses = 0;
 $result->data_seek(0);
 while ($exp = $result->fetch_assoc()) {
@@ -50,7 +49,6 @@ $result->data_seek(0);
 ?>
 
 <div class="admin-content" style="max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
-    <!-- Success/Error Messages -->
     <?php if (isset($_GET['added']) && $_GET['added'] == '1'): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle me-2"></i>
@@ -89,7 +87,6 @@ $result->data_seek(0);
         </div>
     <?php endif; ?>
 
-    <!-- Page Header -->
     <div class="page-header mb-4">
         <div>
             <h1 class="page-title">Expenses Management</h1>
@@ -102,7 +99,6 @@ $result->data_seek(0);
         </div>
     </div>
 
-    <!-- Summary Card -->
     <div class="row g-4 mb-4">
         <div class="col-md-4">
             <div class="stat-card stat-card-danger">
@@ -134,7 +130,6 @@ $result->data_seek(0);
         </div>
     </div>
 
-    <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
@@ -188,7 +183,6 @@ $result->data_seek(0);
         </div>
     </div>
 
-    <!-- Expenses Table Card -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">
@@ -267,7 +261,6 @@ $result->data_seek(0);
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

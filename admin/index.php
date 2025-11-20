@@ -2,7 +2,6 @@
 session_start();
 include '../includes/db.php';
 
-// Redirect if already logged in
 if (isset($_SESSION['admin_id'])) {
     include '../includes/functions.php';
     redirect('dashboard.php');
@@ -367,7 +366,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Add loading state on form submit
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             const submitBtn = this.querySelector('.btn-login');
             const originalText = submitBtn.innerHTML;

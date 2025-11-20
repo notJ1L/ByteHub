@@ -41,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $stmt->execute();
   $order_id = $stmt->insert_id;
   $stmt->close();
-
   $result->data_seek(0);
   while ($row = $result->fetch_assoc()) {
     $pid = (int)$row['product_id'];
@@ -147,7 +146,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       
       $body .= '<tr><td style="background:#f1f3f5;padding:16px 24px;text-align:center;font-size:12px;color:#868e96;border-top:1px solid #dee2e6;">&copy; ' . date('Y') . ' ByteHub. All rights reserved.</td></tr>';
       $body .= '</table></body></html>';
-
       $altBody = "Thank you for your order at ByteHub!\n\n";
       $altBody .= "Order Code: " . $order_code . "\n\n";
       $altBody .= "Order Items:\n";
@@ -181,7 +179,6 @@ include '../includes/header.php';
                 <h1 class="display-5 fw-bold text-dark mb-2">Checkout</h1>
                 <p class="text-muted">Review your order and complete your purchase</p>
             </div>
-
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white border-bottom">
                     <h5 class="card-title mb-0">

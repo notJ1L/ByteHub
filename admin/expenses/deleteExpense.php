@@ -16,7 +16,6 @@ if (!$id) {
     redirect("expenses.php?error=invalid_id");
 }
 
-// Delete expense
 $stmt = $conn->prepare("DELETE FROM expenses WHERE expenses_id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();

@@ -1,12 +1,9 @@
 <?php
-// Start output buffering FIRST - before any includes
 if (!ob_get_level()) {
     ob_start();
 }
 
-// Process POST request IMMEDIATELY (before any includes that might output)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
-    // Include only what we need for POST processing
     include '../includes/db.php';
     include '../includes/functions.php';
     include '../includes/config.php';
@@ -19,7 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     $id = $_GET['id'] ?? 0;
     $status = $_POST['status'];
     
-    // Check if PHPMailer is properly installed and available
     $phpmailer_path = __DIR__ . '/../includes/PHPMailer/';
     $phpmailer_file = $phpmailer_path . 'PHPMailer.php';
     $phpmailer_available = false;
@@ -44,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
         }
     }
     
-    // Get order info for email
     $stmt = $conn->prepare("SELECT o.*, u.username, u.email FROM orders o LEFT JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -59,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     $stmt->bind_param("si", $status, $id);
     $stmt->execute();
 
-    // Send email notification (if PHPMailer is available and properly configured)
     if ($phpmailer_available && defined('MAILTRAP_HOST') && !empty(MAILTRAP_HOST)) {
         try {
             if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
@@ -78,7 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
             $mail->Username   = MAILTRAP_USER;
             $mail->Password   = MAILTRAP_PASS;
             
-            // Mailtrap sandbox port 2525 doesn't use encryption
             if (MAILTRAP_PORT != 2525) {
                 if (defined($encryption_class . '::ENCRYPTION_STARTTLS')) {
                     $mail->SMTPSecure = constant($encryption_class . '::ENCRYPTION_STARTTLS');
@@ -119,9 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                 $mail->send();
             }
         } catch (Exception $e) {
-            // Email sending failed, but order update was successful
         } catch (\Exception $e) {
-            // Catch any other exceptions
         }
     }
 
@@ -129,7 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     redirect("orders.php?status_updated=1");
 }
 
-// Normal page load (GET request) - include files and display page
 include '../includes/db.php';
 include '../includes/functions.php';
 include '../includes/config.php';
@@ -139,7 +129,6 @@ if (!isAdmin()) {
     redirect('../customer/index.php');
 }
 
-// Check if PHPMailer is properly installed and available (for future use)
 $phpmailer_path = __DIR__ . '/../includes/PHPMailer/';
 $phpmailer_file = $phpmailer_path . 'PHPMailer.php';
 $phpmailer_available = false;
@@ -166,7 +155,6 @@ if (file_exists($phpmailer_file)) {
 
 $id = $_GET['id'] ?? 0;
 
-// Get order data for display
 $stmt = $conn->prepare("SELECT o.*, u.username, u.email FROM orders o LEFT JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
@@ -177,18 +165,15 @@ if (!$order) {
     redirect('orders.php?error=not_found');
 }
 
-// End output buffering and start output (only if buffer exists)
 if (ob_get_level()) {
     ob_end_flush();
 }
 
-// Now include header (after all redirects are handled)
 include '../includes/admin_header.php';
 ?>
 
 <div class="admin-content">
     <div class="container-fluid">
-        <!-- Page Header -->
         <div class="page-header mb-4">
             <div>
                 <h2 class="page-title">
@@ -257,7 +242,6 @@ include '../includes/admin_header.php';
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

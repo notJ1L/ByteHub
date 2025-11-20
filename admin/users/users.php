@@ -42,7 +42,6 @@ if ($stmt) {
 ?>
 
 <div class="admin-content">
-    <!-- Page Header -->
     <div class="page-header mb-4">
         <div>
             <h1 class="page-title">User Management</h1>
@@ -55,7 +54,6 @@ if ($stmt) {
         </div>
     </div>
 
-    <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
@@ -107,7 +105,6 @@ if ($stmt) {
         </div>
     </div>
 
-    <!-- Users Table Card -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">
@@ -200,7 +197,6 @@ if ($stmt) {
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <?php include '../footer.php'; ?>

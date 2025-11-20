@@ -8,7 +8,6 @@ if (!isAdmin()) {
 
 $id = $_GET['id'] ?? 0;
 
-// fetch category
 $catQuery = $conn->query("SELECT * FROM categories WHERE category_id = $id LIMIT 1");
 $category = $catQuery->fetch_assoc();
 
@@ -37,7 +36,6 @@ include '../../includes/admin_header.php';
 
 <div class="admin-content">
     <div class="container-fluid">
-        <!-- Page Header -->
         <div class="page-header mb-4">
             <div>
                 <h2 class="page-title">
@@ -99,7 +97,6 @@ include '../../includes/admin_header.php';
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

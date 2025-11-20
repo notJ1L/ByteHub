@@ -16,7 +16,6 @@ if (!$id) {
     redirect("categories.php?error=invalid_id");
 }
 
-// Check if products use this category
 $stmt = $conn->prepare("SELECT COUNT(*) AS total FROM products WHERE category_id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
@@ -29,7 +28,6 @@ if ($count > 0) {
     redirect("categories.php?error=in_use&count=$count");
 }
 
-// Delete category
 $stmt = $conn->prepare("DELETE FROM categories WHERE category_id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();

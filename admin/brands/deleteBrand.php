@@ -16,7 +16,6 @@ if (!$id) {
     redirect("brands.php?error=invalid_id");
 }
 
-// Check if products use this brand
 $stmt = $conn->prepare("SELECT COUNT(*) AS total FROM products WHERE brand_id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
@@ -29,7 +28,6 @@ if ($count > 0) {
     redirect("brands.php?error=in_use&count=$count");
 }
 
-// Delete brand
 $stmt = $conn->prepare("DELETE FROM brands WHERE brand_id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();

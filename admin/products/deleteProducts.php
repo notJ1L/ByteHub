@@ -16,7 +16,6 @@ if (!$id) {
     redirect("products.php?error=invalid_id");
 }
 
-// Get product image
 $stmt = $conn->prepare("SELECT image FROM products WHERE product_id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
@@ -30,7 +29,6 @@ if ($product && !empty($product['image'])) {
     }
 }
 
-// Delete associated product images
 $stmt = $conn->prepare("SELECT filename FROM product_images WHERE product_id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
@@ -43,12 +41,10 @@ while ($img = $imagesResult->fetch_assoc()) {
     }
 }
 
-// Delete product images from database
 $stmt = $conn->prepare("DELETE FROM product_images WHERE product_id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 
-// Delete product from database
 $stmt = $conn->prepare("DELETE FROM products WHERE product_id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();

@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($stmt->execute()) {
             $success = "Profile updated successfully!";
-            $photo = $newPhotoName; // Update photo preview immediately
+            $photo = $newPhotoName;
         } else {
             $errors[] = "Failed to update profile.";
         }

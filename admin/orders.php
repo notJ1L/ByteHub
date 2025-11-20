@@ -81,7 +81,6 @@ function getStatusIcon($status) {
 ?>
 
 <div class="admin-content" style="padding-left: 2.5rem; max-width: calc(100vw - 280px); overflow-x: hidden; box-sizing: border-box;">
-    <!-- Page Header -->
     <div class="page-header mb-4">
         <div>
             <h1 class="page-title">Orders Management</h1>
@@ -89,7 +88,6 @@ function getStatusIcon($status) {
         </div>
     </div>
 
-    <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
@@ -160,7 +158,6 @@ function getStatusIcon($status) {
         </div>
     </div>
 
-    <!-- Orders Table Card -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">
@@ -237,7 +234,6 @@ function getStatusIcon($status) {
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <style>

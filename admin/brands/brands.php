@@ -35,7 +35,6 @@ if ($stmt) {
 ?>
 
 <div class="admin-content">
-    <!-- Page Header -->
     <div class="page-header mb-4">
         <div>
             <h1 class="page-title">Brands Management</h1>
@@ -48,7 +47,6 @@ if ($stmt) {
         </div>
     </div>
 
-    <!-- Success/Error Messages -->
     <?php if (isset($_GET['added']) && $_GET['added'] == '1'): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle me-2"></i>
@@ -89,7 +87,6 @@ if ($stmt) {
         </div>
     <?php endif; ?>
 
-    <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
@@ -134,7 +131,6 @@ if ($stmt) {
         </div>
     </div>
 
-    <!-- Brands Table Card -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">
@@ -202,7 +198,6 @@ if ($stmt) {
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <?php include '../footer.php'; ?>

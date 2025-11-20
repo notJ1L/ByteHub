@@ -14,7 +14,6 @@ $brand_filter = $_GET['brand'] ?? '';
 $status_filter = $_GET['status'] ?? '';
 $sort_order = $_GET['sort'] ?? 'newest';
 
-// Fetch categories and brands for dropdowns
 $categories_result = $conn->query("SELECT * FROM categories WHERE active = 1 ORDER BY name");
 $brands_result = $conn->query("SELECT * FROM brands WHERE active = 1 ORDER BY name");
 
@@ -72,7 +71,6 @@ if ($stmt) {
 ?>
 
 <div class="admin-content">
-    <!-- Page Header -->
     <div class="page-header mb-4">
         <div>
             <h1 class="page-title">Products Management</h1>
@@ -85,7 +83,6 @@ if ($stmt) {
         </div>
     </div>
 
-    <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
@@ -100,7 +97,6 @@ if ($stmt) {
         <div class="card-body">
             <form method="GET" class="filter-form-modern">
                 <div class="row g-3">
-                    <!-- Search Bar -->
                     <div class="col-12">
                         <label class="form-label">Search</label>
                         <div class="input-group">
@@ -115,7 +111,6 @@ if ($stmt) {
                         </div>
                     </div>
                     
-                    <!-- Filters Row -->
                     <div class="col-md-3">
                         <label for="category" class="form-label">Category</label>
                         <select name="category" id="category" class="form-select">
@@ -170,7 +165,6 @@ if ($stmt) {
         </div>
     </div>
 
-    <!-- Products Table Card -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">
@@ -275,7 +269,6 @@ if ($stmt) {
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
 <?php include '../footer.php'; ?>
