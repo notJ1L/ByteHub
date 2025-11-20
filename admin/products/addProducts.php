@@ -15,19 +15,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   $name = trim($_POST['product_name']);
   $model = trim($_POST['model']);
-  $price = (float)$_POST['price'];
-  $stock = (int)$_POST['stock'];
-  $category_id = (int)$_POST['category_id'];
-  $brand_id = (int)$_POST['brand_id'];
+  $price = isset($_POST['price']) ? trim($_POST['price']) : '';
+  $stock = isset($_POST['stock']) ? trim($_POST['stock']) : '';
+  $category_id = isset($_POST['category_id']) ? (int)$_POST['category_id'] : 0;
+  $brand_id = isset($_POST['brand_id']) ? (int)$_POST['brand_id'] : 0;
   $featured = isset($_POST['featured']) ? 1 : 0;
   $new_arrival = isset($_POST['new_arrival']) ? 1 : 0;
-  $description = $_POST['description'];
-  $specs = $_POST['specifications'];
+  $description = isset($_POST['description']) ? trim($_POST['description']) : '';
+  $specs = isset($_POST['specifications']) ? trim($_POST['specifications']) : '';
 
-  if (empty($name)) $errors[] = 'Product name is required.';
-  if (empty($model)) $errors[] = 'Model is required.';
-  if (empty($price)) $errors[] = 'Price is required.';
-  if (empty($stock)) $errors[] = 'Stock is required.';
+  // Product Name Validation
+  if (empty($name)) {
+    $errors[] = 'Product name is required.';
+  } elseif (strlen($name) < 3) {
+    $errors[] = 'Product name must be at least 3 characters long.';
+  } elseif (strlen($name) > 255) {
+    $errors[] = 'Product name must not exceed 255 characters.';
+  }
+
+  // Model Validation
+  if (empty($model)) {
+    $errors[] = 'Model is required.';
+  } elseif (strlen($model) < 2) {
+    $errors[] = 'Model must be at least 2 characters long.';
+  } elseif (strlen($model) > 100) {
+    $errors[] = 'Model must not exceed 100 characters.';
+  }
+
+  // Price Validation
+  if (empty($price)) {
+    $errors[] = 'Price is required.';
+  } elseif (!is_numeric($price)) {
+    $errors[] = 'Price must be a valid number.';
+  } else {
+    $price = (float)$price;
+    if ($price <= 0) {
+      $errors[] = 'Price must be greater than 0.';
+    } elseif ($price > 999999.99) {
+      $errors[] = 'Price must not exceed ₱999,999.99.';
+    }
+  }
+
+  // Stock Validation
+  if (empty($stock) && $stock !== '0') {
+    $errors[] = 'Stock quantity is required.';
+  } elseif (!is_numeric($stock)) {
+    $errors[] = 'Stock must be a valid number.';
+  } else {
+    $stock = (int)$stock;
+    if ($stock < 0) {
+      $errors[] = 'Stock quantity cannot be negative.';
+    } elseif ($stock > 999999) {
+      $errors[] = 'Stock quantity must not exceed 999,999.';
+    }
+  }
+
+  // Category Validation
+  if (empty($category_id) || $category_id <= 0) {
+    $errors[] = 'Please select a category.';
+  } else {
+    $catCheck = $conn->prepare("SELECT category_id FROM categories WHERE category_id = ? AND active = 1");
+    $catCheck->bind_param("i", $category_id);
+    $catCheck->execute();
+    $catResult = $catCheck->get_result();
+    if ($catResult->num_rows === 0) {
+      $errors[] = 'Selected category is invalid or inactive.';
+    }
+    $catCheck->close();
+  }
+
+  // Brand Validation
+  if (empty($brand_id) || $brand_id <= 0) {
+    $errors[] = 'Please select a brand.';
+  } else {
+    $brandCheck = $conn->prepare("SELECT brand_id FROM brands WHERE brand_id = ? AND active = 1");
+    $brandCheck->bind_param("i", $brand_id);
+    $brandCheck->execute();
+    $brandResult = $brandCheck->get_result();
+    if ($brandResult->num_rows === 0) {
+      $errors[] = 'Selected brand is invalid or inactive.';
+    }
+    $brandCheck->close();
+  }
+
+  // Description Validation (optional but if provided, check length)
+  if (!empty($description) && strlen($description) > 5000) {
+    $errors[] = 'Product description must not exceed 5000 characters.';
+  }
+
+  // Specifications Validation (optional but if provided, check length)
+  if (!empty($specs) && strlen($specs) > 5000) {
+    $errors[] = 'Technical specifications must not exceed 5000 characters.';
+  }
 
   if (empty($errors)) {
     $stmt = $conn->prepare("
@@ -49,41 +128,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     $maxFileSize = 5 * 1024 * 1024;
 
-    if (!empty($_FILES['image']['name']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $fileType = mime_content_type($_FILES['image']['tmp_name']);
-        if (!in_array($fileType, $allowedTypes)) {
-            $errors[] = 'Main image must be a valid image file (JPEG, PNG, GIF, or WebP).';
-        } elseif ($_FILES['image']['size'] > $maxFileSize) {
-            $errors[] = 'Main image size must be less than 5MB.';
-        } else {
-            $fileExtension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $mainImage = uniqid('main_', true) . '_' . time() . '.' . $fileExtension;
-            $target = $uploadDir . $mainImage;
-
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
-                $updateStmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
-                $updateStmt->bind_param("si", $mainImage, $product_id);
-                $updateStmt->execute();
-                $updateStmt->close();
+    if (!empty($_FILES['image']['name'])) {
+        if ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            switch ($_FILES['image']['error']) {
+                case UPLOAD_ERR_INI_SIZE:
+                case UPLOAD_ERR_FORM_SIZE:
+                    $errors[] = 'Main image file size exceeds the maximum allowed size (5MB).';
+                    break;
+                case UPLOAD_ERR_PARTIAL:
+                    $errors[] = 'Main image was only partially uploaded.';
+                    break;
+                case UPLOAD_ERR_NO_FILE:
+                    break;
+                default:
+                    $errors[] = 'An error occurred while uploading the main image.';
+            }
+        } elseif ($_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $fileType = mime_content_type($_FILES['image']['tmp_name']);
+            if (!in_array($fileType, $allowedTypes)) {
+                $errors[] = 'Main image must be a valid image file (JPEG, PNG, GIF, or WebP).';
+            } elseif ($_FILES['image']['size'] > $maxFileSize) {
+                $errors[] = 'Main image size must be less than 5MB.';
             } else {
-                $errors[] = 'Failed to upload main image.';
+                $fileExtension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+                if (!in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                    $errors[] = 'Main image file extension is not allowed.';
+                } else {
+                    $mainImage = uniqid('main_', true) . '_' . time() . '.' . $fileExtension;
+                    $target = $uploadDir . $mainImage;
+
+                    if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
+                        $updateStmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
+                        $updateStmt->bind_param("si", $mainImage, $product_id);
+                        $updateStmt->execute();
+                        $updateStmt->close();
+                    } else {
+                        $errors[] = 'Failed to upload main image.';
+                    }
+                }
             }
         }
     }
 
     if (!empty($_FILES['images']['name'][0])) {
+        $maxAdditionalImages = 10;
+        $uploadedCount = 0;
+        
         foreach ($_FILES['images']['name'] as $key => $filename) {
+            if ($uploadedCount >= $maxAdditionalImages) {
+                $errors[] = "Maximum {$maxAdditionalImages} additional images allowed.";
+                break;
+            }
+            
             if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
                 $fileType = mime_content_type($_FILES['images']['tmp_name'][$key]);
                 if (!in_array($fileType, $allowedTypes)) {
+                    $errors[] = "Additional image #" . ($key + 1) . " must be a valid image file (JPEG, PNG, GIF, or WebP).";
                     continue;
                 }
                 
                 if ($_FILES['images']['size'][$key] > $maxFileSize) {
+                    $errors[] = "Additional image #" . ($key + 1) . " size must be less than 5MB.";
                     continue;
                 }
 
-                $fileExtension = pathinfo($filename, PATHINFO_EXTENSION);
+                $fileExtension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                if (!in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                    $errors[] = "Additional image #" . ($key + 1) . " file extension is not allowed.";
+                    continue;
+                }
+
                 $imgName = uniqid('img_', true) . '_' . time() . '_' . $key . '.' . $fileExtension;
                 $uploadPath = $uploadDir . $imgName;
 
@@ -92,7 +206,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $imgStmt->bind_param("is", $product_id, $imgName);
                     $imgStmt->execute();
                     $imgStmt->close();
+                    $uploadedCount++;
+                } else {
+                    $errors[] = "Failed to upload additional image #" . ($key + 1) . ".";
                 }
+            } elseif ($_FILES['images']['error'][$key] !== UPLOAD_ERR_NO_FILE) {
+                $errors[] = "Error uploading additional image #" . ($key + 1) . ".";
             }
         }
     }
@@ -138,7 +257,7 @@ $brands = $conn->query("SELECT * FROM brands WHERE active=1");
 
         <div class="card">
             <div class="card-body">
-                <form method="POST" enctype="multipart/form-data">
+                <form method="POST" enctype="multipart/form-data" id="addProductForm" novalidate>
                     <div class="row g-4">
                         <div class="col-12">
                             <h5 class="section-title mb-3">
@@ -149,13 +268,19 @@ $brands = $conn->query("SELECT * FROM brands WHERE active=1");
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Product Name <span class="text-danger">*</span></label>
                             <input type="text" name="product_name" class="form-control" required
-                                   placeholder="Enter product name" value="<?php echo isset($_POST['product_name']) ? htmlspecialchars($_POST['product_name']) : ''; ?>">
+                                   placeholder="Enter product name" 
+                                   value="<?php echo isset($_POST['product_name']) ? htmlspecialchars($_POST['product_name']) : ''; ?>"
+                                   minlength="3" maxlength="255">
+                            <small class="text-muted">Must be 3-255 characters long</small>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Model <span class="text-danger">*</span></label>
                             <input type="text" name="model" class="form-control" required
-                                   placeholder="Enter model number" value="<?php echo isset($_POST['model']) ? htmlspecialchars($_POST['model']) : ''; ?>">
+                                   placeholder="Enter model number" 
+                                   value="<?php echo isset($_POST['model']) ? htmlspecialchars($_POST['model']) : ''; ?>"
+                                   minlength="2" maxlength="100">
+                            <small class="text-muted">Must be 2-100 characters long</small>
                         </div>
 
                         <div class="col-md-4">
@@ -163,14 +288,20 @@ $brands = $conn->query("SELECT * FROM brands WHERE active=1");
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
                                 <input type="number" step="0.01" name="price" class="form-control" required
-                                       placeholder="0.00" value="<?php echo isset($_POST['price']) ? htmlspecialchars($_POST['price']) : ''; ?>">
+                                       placeholder="0.00" 
+                                       value="<?php echo isset($_POST['price']) ? htmlspecialchars($_POST['price']) : ''; ?>"
+                                       min="0.01" max="999999.99">
                             </div>
+                            <small class="text-muted">Must be greater than ₱0.00</small>
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Stock Quantity <span class="text-danger">*</span></label>
                             <input type="number" name="stock" class="form-control" required
-                                   placeholder="0" value="<?php echo isset($_POST['stock']) ? htmlspecialchars($_POST['stock']) : ''; ?>">
+                                   placeholder="0" 
+                                   value="<?php echo isset($_POST['stock']) ? htmlspecialchars($_POST['stock']) : ''; ?>"
+                                   min="0" max="999999">
+                            <small class="text-muted">Must be 0 or greater</small>
                         </div>
 
                         <div class="col-md-4">
@@ -231,13 +362,17 @@ $brands = $conn->query("SELECT * FROM brands WHERE active=1");
                         <div class="col-12">
                             <label class="form-label fw-semibold">Product Description</label>
                             <textarea name="description" rows="6" class="form-control" 
-                                      placeholder="Enter detailed product description..."><?php echo isset($_POST['description']) ? htmlspecialchars($_POST['description']) : ''; ?></textarea>
+                                      placeholder="Enter detailed product description..."
+                                      maxlength="5000"><?php echo isset($_POST['description']) ? htmlspecialchars($_POST['description']) : ''; ?></textarea>
+                            <small class="text-muted">Maximum 5000 characters</small>
                         </div>
 
                         <div class="col-12">
                             <label class="form-label fw-semibold">Technical Specifications</label>
                             <textarea name="specifications" rows="6" class="form-control" 
-                                      placeholder="Enter technical specifications (one per line)..."><?php echo isset($_POST['specifications']) ? htmlspecialchars($_POST['specifications']) : ''; ?></textarea>
+                                      placeholder="Enter technical specifications (one per line)..."
+                                      maxlength="5000"><?php echo isset($_POST['specifications']) ? htmlspecialchars($_POST['specifications']) : ''; ?></textarea>
+                            <small class="text-muted">Maximum 5000 characters</small>
                         </div>
 
                         <div class="col-12">
@@ -249,14 +384,14 @@ $brands = $conn->query("SELECT * FROM brands WHERE active=1");
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Main Product Image</label>
-                            <input type="file" name="image" class="form-control" accept="image/*">
-                            <small class="text-muted">This will be the primary product image</small>
+                            <input type="file" name="image" class="form-control" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp">
+                            <small class="text-muted">JPEG, PNG, GIF, or WebP (max 5MB). This will be the primary product image</small>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Additional Product Images</label>
-                            <input type="file" name="images[]" class="form-control" accept="image/*" multiple>
-                            <small class="text-muted">You can select multiple images</small>
+                            <input type="file" name="images[]" class="form-control" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" multiple>
+                            <small class="text-muted">JPEG, PNG, GIF, or WebP (max 5MB each, up to 10 images)</small>
                         </div>
 
                         <div class="col-12">
@@ -331,6 +466,220 @@ $brands = $conn->query("SELECT * FROM brands WHERE active=1");
     background-color: var(--primary-green);
     border-color: var(--primary-green);
 }
+
+/* Only show invalid styling when field has been validated */
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #dc3545;
+}
+
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #dc3545;
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('addProductForm');
+    const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+    let formSubmitted = false;
+    
+    // Track if form has been submitted
+    form.addEventListener('submit', function(e) {
+        formSubmitted = true;
+    });
+    
+    // Set custom validation messages
+    inputs.forEach(input => {
+        input.addEventListener('invalid', function(e) {
+            e.preventDefault();
+            // Only show error if form has been submitted
+            if (formSubmitted) {
+                showFieldError(this);
+            }
+        });
+        
+        input.addEventListener('input', function() {
+            // Clear error when user starts typing
+            if (this.validity.valid) {
+                clearFieldError(this);
+            } else if (formSubmitted) {
+                // Only show error if form was already submitted
+                showFieldError(this);
+            }
+        });
+        
+        input.addEventListener('blur', function() {
+            // Only validate on blur if form has been submitted
+            if (formSubmitted && !this.validity.valid) {
+                showFieldError(this);
+            }
+        });
+    });
+    
+    // Custom validation for form submission
+    form.addEventListener('submit', function(e) {
+        formSubmitted = true;
+        let isValid = true;
+        let firstInvalidField = null;
+        
+        inputs.forEach(input => {
+            if (!input.validity.valid) {
+                isValid = false;
+                showFieldError(input);
+                if (!firstInvalidField) {
+                    firstInvalidField = input;
+                }
+            }
+        });
+        
+        // Validate price
+        const priceInput = form.querySelector('input[name="price"]');
+        if (priceInput && priceInput.value) {
+            const price = parseFloat(priceInput.value);
+            if (price <= 0) {
+                isValid = false;
+                showCustomError(priceInput, 'Price must be greater than ₱0.00');
+                if (!firstInvalidField) firstInvalidField = priceInput;
+            }
+        }
+        
+        // Validate stock
+        const stockInput = form.querySelector('input[name="stock"]');
+        if (stockInput && stockInput.value !== '') {
+            const stock = parseInt(stockInput.value);
+            if (stock < 0) {
+                isValid = false;
+                showCustomError(stockInput, 'Stock quantity cannot be negative');
+                if (!firstInvalidField) firstInvalidField = stockInput;
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            if (firstInvalidField) {
+                firstInvalidField.focus();
+                firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            showAlert('Please fill in all required fields correctly to continue.');
+            return false;
+        }
+    });
+    
+    function showFieldError(field) {
+        clearFieldError(field);
+        
+        let errorMessage = '';
+        
+        if (field.validity.valueMissing) {
+            errorMessage = getRequiredMessage(field);
+        } else if (field.validity.tooShort) {
+            errorMessage = getMinLengthMessage(field);
+        } else if (field.validity.tooLong) {
+            errorMessage = getMaxLengthMessage(field);
+        } else if (field.validity.rangeUnderflow) {
+            errorMessage = getMinValueMessage(field);
+        } else if (field.validity.rangeOverflow) {
+            errorMessage = getMaxValueMessage(field);
+        } else if (field.validity.typeMismatch) {
+            errorMessage = getTypeMismatchMessage(field);
+        } else {
+            errorMessage = 'Please enter a valid value.';
+        }
+        
+        showCustomError(field, errorMessage);
+    }
+    
+    function showCustomError(field, message) {
+        field.classList.add('is-invalid');
+        
+        let errorDiv = field.parentElement.querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            field.parentElement.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+    }
+    
+    function clearFieldError(field) {
+        field.classList.remove('is-invalid');
+        const errorDiv = field.parentElement.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+    
+    function getRequiredMessage(field) {
+        const fieldName = field.previousElementSibling ? field.previousElementSibling.textContent.replace('*', '').trim() : 'This field';
+        return `${fieldName} is required. Please enter details to continue.`;
+    }
+    
+    function getMinLengthMessage(field) {
+        if (field.name === 'product_name') {
+            return 'Product name must be at least 3 characters long.';
+        } else if (field.name === 'model') {
+            return 'Model must be at least 2 characters long.';
+        }
+        return `Please enter at least ${field.minLength} characters.`;
+    }
+    
+    function getMaxLengthMessage(field) {
+        return `Please enter no more than ${field.maxLength} characters.`;
+    }
+    
+    function getMinValueMessage(field) {
+        if (field.name === 'price') {
+            return 'Price must be greater than ₱0.00.';
+        } else if (field.name === 'stock') {
+            return 'Stock quantity cannot be negative.';
+        }
+        return `Value must be at least ${field.min}.`;
+    }
+    
+    function getMaxValueMessage(field) {
+        return `Value must not exceed ${field.max}.`;
+    }
+    
+    function getTypeMismatchMessage(field) {
+        if (field.type === 'email') {
+            return 'Please enter a valid email address.';
+        }
+        return 'Please enter a valid value.';
+    }
+    
+    function showAlert(message) {
+        // Remove existing alert if any
+        const existingAlert = document.querySelector('.validation-alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show validation-alert';
+        alertDiv.innerHTML = `
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Error:</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        const formCard = form.closest('.card');
+        formCard.insertBefore(alertDiv, formCard.querySelector('.card-body'));
+        
+        // Auto scroll to alert
+        alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+});
+</script>
 
 <?php include '../footer.php'; ?>

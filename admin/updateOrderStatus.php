@@ -163,8 +163,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                                 <tr>
                                     <td>' . htmlspecialchars($item['name_snapshot']) . '</td>
                                     <td>' . htmlspecialchars($item['quantity']) . '</td>
-                                    <td>PHP' . number_format($item['unit_price_snapshot'], 2) . '</td>
-                                    <td>PHP' . number_format($item['line_total'], 2) . '</td>
+                                    <td>₱' . number_format($item['unit_price_snapshot'], 2) . '</td>
+                                    <td>₱' . number_format($item['line_total'], 2) . '</td>
                                 </tr>';
             }
 
@@ -174,15 +174,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                         <div class="total-section">
                             <div class="total-row">
                                 <span>Subtotal:</span>
-                                <span>PHP' . number_format($order['subtotal'], 2) . '</span>
+                                <span>₱' . number_format($order['subtotal'], 2) . '</span>
                             </div>
                             <div class="total-row">
                                 <span>Tax:</span>
-                                <span>PHP' . number_format($order['tax'], 2) . '</span>
+                                <span>₱' . number_format($order['tax'], 2) . '</span>
                             </div>
                             <div class="total-row grand-total">
                                 <span>Grand Total:</span>
-                                <span>PHP' . number_format($order['total'], 2) . '</span>
+                                <span>₱' . number_format($order['total'], 2) . '</span>
                             </div>
                         </div>
                         <p>Thank you for shopping with ByteHub!</p>
