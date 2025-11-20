@@ -16,29 +16,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     $id = $_GET['id'] ?? 0;
     $status = $_POST['status'];
     
-    $phpmailer_path = __DIR__ . '/../includes/PHPMailer/';
-    $phpmailer_file = $phpmailer_path . 'PHPMailer.php';
     $phpmailer_available = false;
-
-    if (file_exists($phpmailer_file)) {
-        $file_content = file_get_contents($phpmailer_file);
-        if (strlen(trim($file_content)) > 500 && 
-            (strpos($file_content, 'class PHPMailer') !== false || 
-             strpos($file_content, 'namespace PHPMailer') !== false)) {
-            try {
-                @require_once $phpmailer_path . 'Exception.php';
-                @require_once $phpmailer_file;
-                @require_once $phpmailer_path . 'SMTP.php';
-                if (class_exists('PHPMailer\PHPMailer\PHPMailer') || class_exists('PHPMailer')) {
-                    $phpmailer_available = true;
-                }
-            } catch (Exception $e) {
-                $phpmailer_available = false;
-            } catch (\Exception $e) {
-                $phpmailer_available = false;
-            }
+    
+    $autoload = __DIR__ . '/../vendor/autoload.php';
+    if (file_exists($autoload)) {
+        require_once $autoload;
+    }
+    
+    if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+        $legacyBase = __DIR__ . '/../includes/PHPMailer/';
+        if (file_exists($legacyBase . 'PHPMailer.php')) {
+            @require_once $legacyBase . 'Exception.php';
+            @require_once $legacyBase . 'PHPMailer.php';
+            @require_once $legacyBase . 'SMTP.php';
         }
     }
+    
+    if (class_exists('PHPMailer\PHPMailer\PHPMailer') || class_exists('PHPMailer')) {
+        $phpmailer_available = true;
+    }
+    
+    error_log("PHPMailer available: " . ($phpmailer_available ? 'YES' : 'NO'));
+    error_log("MAILTRAP_HOST defined: " . (defined('MAILTRAP_HOST') ? 'YES (' . MAILTRAP_HOST . ')' : 'NO'));
     
     $stmt = $conn->prepare("SELECT o.*, u.username, u.email FROM orders o LEFT JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?");
     $stmt->bind_param("i", $id);
@@ -50,11 +49,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
         redirect('orders.php?error=not_found');
     }
 
+    $old_status = $order['status'];
+    $status_changed = ($old_status !== $status);
+
     $stmt = $conn->prepare("UPDATE orders SET status=? WHERE order_id=?");
     $stmt->bind_param("si", $status, $id);
     $stmt->execute();
 
-    if ($phpmailer_available && defined('MAILTRAP_HOST') && !empty(MAILTRAP_HOST)) {
+    $email_sent = false;
+    $email_error = null;
+
+    if ($status_changed && !empty($order['email'])) {
+        if ($phpmailer_available && defined('MAILTRAP_HOST') && !empty(MAILTRAP_HOST)) {
         try {
             if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
                 $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
@@ -79,45 +85,149 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                     $mail->SMTPSecure = 'tls';
                 }
             }
-            $mail->Port       = MAILTRAP_PORT;
+            $mail->Port = MAILTRAP_PORT;
 
-            $user_stmt = $conn->prepare("SELECT email FROM users WHERE user_id = ?");
-            $user_stmt->bind_param("i", $order['user_id']);
-            $user_stmt->execute();
-            $user = $user_stmt->get_result()->fetch_assoc();
+            $mail->setFrom('no-reply@bytehub.com', 'ByteHub');
+            $mail->addAddress($order['email'], $order['username']);
 
-            if ($user && !empty($user['email'])) {
-                $mail->setFrom('no-reply@bytehub.com', 'ByteHub');
-                $mail->addAddress($user['email']);
+            $mail->isHTML(true);
+            $mail->Subject = 'Order Status Update - ' . $order['order_code'];
+            
+            $order_items_stmt = $conn->prepare("SELECT * FROM order_items WHERE order_id = ?");
+            $order_items_stmt->bind_param("i", $id);
+            $order_items_stmt->execute();
+            $order_items = $order_items_stmt->get_result();
 
-                $mail->isHTML(true);
-                $mail->Subject = 'Your Order Status has been Updated';
-                
-                $order_items_stmt = $conn->prepare("SELECT * FROM order_items WHERE order_id = ?");
-                $order_items_stmt->bind_param("i", $id);
-                $order_items_stmt->execute();
-                $order_items = $order_items_stmt->get_result();
+            $status_colors = [
+                'Pending' => '#ffc107',
+                'Processing' => '#17a2b8',
+                'Shipped' => '#007bff',
+                'Completed' => '#28a745',
+                'Cancelled' => '#dc3545'
+            ];
+            $status_color = $status_colors[$status] ?? '#6c757d';
 
-                $email_body = "<h1>Your order #{$order['order_code']} is now {$status}</h1>";
-                $email_body .= "<table border='1' cellpadding='5'><tr><th>Product</th><th>Quantity</th><th>Price</th><th>Total</th></tr>";
-                while ($item = $order_items->fetch_assoc()) {
-                    $email_body .= "<tr><td>{$item['name_snapshot']}</td><td>{$item['quantity']}</td><td>{$item['unit_price_snapshot']}</td><td>{$item['line_total']}</td></tr>";
-                }
-                $email_body .= "</table>";
-                $email_body .= "<p>Subtotal: {$order['subtotal']}</p>";
-                $email_body .= "<p>Tax: {$order['tax']}</p>";
-                $email_body .= "<p><strong>Grand Total: {$order['total']}</strong></p>";
+            $email_body = '
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #004d26 0%, #006633 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                    .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .status-badge { display: inline-block; padding: 10px 20px; background: ' . $status_color . '; color: white; border-radius: 5px; font-weight: bold; font-size: 18px; margin: 20px 0; }
+                    .order-info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                    .order-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                    .order-table th, .order-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+                    .order-table th { background: #f8f9fa; font-weight: bold; }
+                    .total-section { background: white; padding: 20px; border-radius: 8px; margin-top: 20px; }
+                    .total-row { display: flex; justify-content: space-between; padding: 8px 0; }
+                    .grand-total { font-size: 20px; font-weight: bold; color: #004d26; border-top: 2px solid #004d26; padding-top: 10px; margin-top: 10px; }
+                    .footer { text-align: center; margin-top: 30px; color: #6c757d; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Order Status Update</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hello ' . htmlspecialchars($order['username']) . ',</p>
+                        <p>Your order status has been updated:</p>
+                        <div style="text-align: center;">
+                            <div class="status-badge">' . htmlspecialchars($status) . '</div>
+                        </div>
+                        <div class="order-info">
+                            <h3 style="margin-top: 0;">Order Details</h3>
+                            <p><strong>Order Code:</strong> ' . htmlspecialchars($order['order_code']) . '</p>
+                            <p><strong>Previous Status:</strong> ' . htmlspecialchars($old_status) . '</p>
+                            <p><strong>New Status:</strong> ' . htmlspecialchars($status) . '</p>
+                            <p><strong>Order Date:</strong> ' . date('F j, Y g:i A', strtotime($order['created_at'])) . '</p>
+                        </div>
+                        <h3>Order Items</h3>
+                        <table class="order-table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>';
 
-                $mail->Body = $email_body;
-                $mail->send();
+            while ($item = $order_items->fetch_assoc()) {
+                $email_body .= '
+                                <tr>
+                                    <td>' . htmlspecialchars($item['name_snapshot']) . '</td>
+                                    <td>' . htmlspecialchars($item['quantity']) . '</td>
+                                    <td>PHP' . number_format($item['unit_price_snapshot'], 2) . '</td>
+                                    <td>PHP' . number_format($item['line_total'], 2) . '</td>
+                                </tr>';
             }
+
+            $email_body .= '
+                            </tbody>
+                        </table>
+                        <div class="total-section">
+                            <div class="total-row">
+                                <span>Subtotal:</span>
+                                <span>PHP' . number_format($order['subtotal'], 2) . '</span>
+                            </div>
+                            <div class="total-row">
+                                <span>Tax:</span>
+                                <span>PHP' . number_format($order['tax'], 2) . '</span>
+                            </div>
+                            <div class="total-row grand-total">
+                                <span>Grand Total:</span>
+                                <span>PHP' . number_format($order['total'], 2) . '</span>
+                            </div>
+                        </div>
+                        <p>Thank you for shopping with ByteHub!</p>
+                        <p>If you have any questions, please contact our support team.</p>
+                    </div>
+                    <div class="footer">
+                        <p>This is an automated email from ByteHub. Please do not reply to this email.</p>
+                    </div>
+                </div>
+            </body>
+            </html>';
+
+            $mail->Body = $email_body;
+            $mail->AltBody = "Hello " . $order['username'] . ",\n\nYour order #" . $order['order_code'] . " status has been updated from " . $old_status . " to " . $status . ".\n\nThank you for shopping with ByteHub!";
+            
+            $mail->send();
+            $email_sent = true;
+            error_log("Order update email sent successfully to {$order['email']} for order #{$order['order_code']}");
         } catch (Exception $e) {
+            $email_error = $e->getMessage();
+            error_log("Order update email failed for order #{$order['order_code']}: " . $e->getMessage());
         } catch (\Exception $e) {
+            $email_error = $e->getMessage();
+            error_log("Order update email failed for order #{$order['order_code']}: " . $e->getMessage());
+        }
+        } else {
+            $email_error = "PHPMailer not available or SMTP not configured";
+            error_log("Order update email failed: PHPMailer not available or SMTP not configured for order #{$order['order_code']}");
+        }
+    } else {
+        if (!$status_changed) {
+            error_log("Order update email skipped: Status unchanged for order #{$order['order_code']}");
+        } elseif (empty($order['email'])) {
+            error_log("Order update email skipped: No email address for order #{$order['order_code']}");
         }
     }
 
     if (ob_get_level()) ob_end_clean();
-    redirect("orders.php?status_updated=1");
+    $redirect_url = "orders.php?status_updated=1";
+    if ($email_sent) {
+        $redirect_url .= "&email_sent=1";
+    } elseif ($email_error) {
+        $redirect_url .= "&email_error=" . urlencode($email_error);
+    }
+    redirect($redirect_url);
 }
 
 include '../includes/db.php';

@@ -88,6 +88,19 @@ function getStatusIcon($status) {
         </div>
     </div>
 
+    <?php if (isset($_GET['status_updated']) && $_GET['status_updated'] == '1'): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Success!</strong> Order status has been updated successfully.
+            <?php if (isset($_GET['email_sent']) && $_GET['email_sent'] == '1'): ?>
+                <br><small>Email notification has been sent to the customer.</small>
+            <?php elseif (isset($_GET['email_error'])): ?>
+                <br><small class="text-warning">Email notification could not be sent: <?php echo htmlspecialchars($_GET['email_error']); ?></small>
+            <?php endif; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
     <div class="card mb-4">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
