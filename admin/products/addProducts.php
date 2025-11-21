@@ -109,116 +109,124 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 
   if (empty($errors)) {
-    $stmt = $conn->prepare("
-      INSERT INTO products 
-      (product_name, model, price, stock, image, featured, new_arrival, active, category_id, brand_id, description, specifications)
-      VALUES 
-      (?, ?, ?, ?, '', ?, ?, 1, ?, ?, ?, ?)
-    ");
-    $stmt->bind_param("ssdiisssss", $name, $model, $price, $stock, $featured, $new_arrival, $category_id, $brand_id, $description, $specs);
-    $stmt->execute();
+    $conn->begin_transaction();
 
-    $product_id = $conn->insert_id;
+    try {
+      $stmt = $conn->prepare("
+        INSERT INTO products 
+        (product_name, model, price, stock, image, featured, new_arrival, active, category_id, brand_id, description, specifications)
+        VALUES 
+        (?, ?, ?, ?, '', ?, ?, 1, ?, ?, ?, ?)
+      ");
+      $stmt->bind_param("ssdiisssss", $name, $model, $price, $stock, $featured, $new_arrival, $category_id, $brand_id, $description, $specs);
+      
+      if (!$stmt->execute()) {
+        throw new Exception("Failed to insert product: " . $stmt->error);
+      }
 
-    $uploadDir = "../../uploads/products/";
-    if (!file_exists($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
-    }
+      $product_id = $conn->insert_id;
+      $stmt->close();
 
-    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    $maxFileSize = 5 * 1024 * 1024;
+      $uploadDir = "../../uploads/products/";
+      if (!file_exists($uploadDir)) {
+          mkdir($uploadDir, 0755, true);
+      }
 
-    if (!empty($_FILES['image']['name'])) {
-        if ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
-            switch ($_FILES['image']['error']) {
-                case UPLOAD_ERR_INI_SIZE:
-                case UPLOAD_ERR_FORM_SIZE:
-                    $errors[] = 'Main image file size exceeds the maximum allowed size (5MB).';
-                    break;
-                case UPLOAD_ERR_PARTIAL:
-                    $errors[] = 'Main image was only partially uploaded.';
-                    break;
-                case UPLOAD_ERR_NO_FILE:
-                    break;
-                default:
-                    $errors[] = 'An error occurred while uploading the main image.';
-            }
-        } elseif ($_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $fileType = mime_content_type($_FILES['image']['tmp_name']);
-            if (!in_array($fileType, $allowedTypes)) {
-                $errors[] = 'Main image must be a valid image file (JPEG, PNG, GIF, or WebP).';
-            } elseif ($_FILES['image']['size'] > $maxFileSize) {
-                $errors[] = 'Main image size must be less than 5MB.';
-            } else {
-                $fileExtension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
-                if (!in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                    $errors[] = 'Main image file extension is not allowed.';
-                } else {
-                    $mainImage = uniqid('main_', true) . '_' . time() . '.' . $fileExtension;
-                    $target = $uploadDir . $mainImage;
+      $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      $maxFileSize = 5 * 1024 * 1024;
 
-                    if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
-                        $updateStmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
-                        $updateStmt->bind_param("si", $mainImage, $product_id);
-                        $updateStmt->execute();
-                        $updateStmt->close();
-                    } else {
-                        $errors[] = 'Failed to upload main image.';
-                    }
-                }
-            }
-        }
-    }
+      if (!empty($_FILES['image']['name'])) {
+          if ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+              switch ($_FILES['image']['error']) {
+                  case UPLOAD_ERR_INI_SIZE:
+                  case UPLOAD_ERR_FORM_SIZE:
+                      throw new Exception('Main image file size exceeds the maximum allowed size (5MB).');
+                  case UPLOAD_ERR_PARTIAL:
+                      throw new Exception('Main image was only partially uploaded.');
+                  case UPLOAD_ERR_NO_FILE:
+                      break;
+                  default:
+                      throw new Exception('An error occurred while uploading the main image.');
+              }
+          } elseif ($_FILES['image']['error'] === UPLOAD_ERR_OK) {
+              $fileType = mime_content_type($_FILES['image']['tmp_name']);
+              if (!in_array($fileType, $allowedTypes)) {
+                  throw new Exception('Main image must be a valid image file (JPEG, PNG, GIF, or WebP).');
+              } elseif ($_FILES['image']['size'] > $maxFileSize) {
+                  throw new Exception('Main image size must be less than 5MB.');
+              } else {
+                  $fileExtension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+                  if (!in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                      throw new Exception('Main image file extension is not allowed.');
+                  } else {
+                      $mainImage = uniqid('main_', true) . '_' . time() . '.' . $fileExtension;
+                      $target = $uploadDir . $mainImage;
 
-    if (!empty($_FILES['images']['name'][0])) {
-        $maxAdditionalImages = 10;
-        $uploadedCount = 0;
-        
-        foreach ($_FILES['images']['name'] as $key => $filename) {
-            if ($uploadedCount >= $maxAdditionalImages) {
-                $errors[] = "Maximum {$maxAdditionalImages} additional images allowed.";
-                break;
-            }
-            
-            if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
-                $fileType = mime_content_type($_FILES['images']['tmp_name'][$key]);
-                if (!in_array($fileType, $allowedTypes)) {
-                    $errors[] = "Additional image #" . ($key + 1) . " must be a valid image file (JPEG, PNG, GIF, or WebP).";
-                    continue;
-                }
-                
-                if ($_FILES['images']['size'][$key] > $maxFileSize) {
-                    $errors[] = "Additional image #" . ($key + 1) . " size must be less than 5MB.";
-                    continue;
-                }
+                      if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
+                          $updateStmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
+                          $updateStmt->bind_param("si", $mainImage, $product_id);
+                          if (!$updateStmt->execute()) {
+                              throw new Exception("Failed to update product image: " . $updateStmt->error);
+                          }
+                          $updateStmt->close();
+                      } else {
+                          throw new Exception('Failed to upload main image.');
+                      }
+                  }
+              }
+          }
+      }
 
-                $fileExtension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-                if (!in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                    $errors[] = "Additional image #" . ($key + 1) . " file extension is not allowed.";
-                    continue;
-                }
+      if (!empty($_FILES['images']['name'][0])) {
+          $maxAdditionalImages = 10;
+          $uploadedCount = 0;
+          
+          foreach ($_FILES['images']['name'] as $key => $filename) {
+              if ($uploadedCount >= $maxAdditionalImages) {
+                  throw new Exception("Maximum {$maxAdditionalImages} additional images allowed.");
+              }
+              
+              if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
+                  $fileType = mime_content_type($_FILES['images']['tmp_name'][$key]);
+                  if (!in_array($fileType, $allowedTypes)) {
+                      throw new Exception("Additional image #" . ($key + 1) . " must be a valid image file (JPEG, PNG, GIF, or WebP).");
+                  }
+                  
+                  if ($_FILES['images']['size'][$key] > $maxFileSize) {
+                      throw new Exception("Additional image #" . ($key + 1) . " size must be less than 5MB.");
+                  }
 
-                $imgName = uniqid('img_', true) . '_' . time() . '_' . $key . '.' . $fileExtension;
-                $uploadPath = $uploadDir . $imgName;
+                  $fileExtension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                  if (!in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                      throw new Exception("Additional image #" . ($key + 1) . " file extension is not allowed.");
+                  }
 
-                if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $uploadPath)) {
-                    $imgStmt = $conn->prepare("INSERT INTO product_images (product_id, filename) VALUES (?, ?)");
-                    $imgStmt->bind_param("is", $product_id, $imgName);
-                    $imgStmt->execute();
-                    $imgStmt->close();
-                    $uploadedCount++;
-                } else {
-                    $errors[] = "Failed to upload additional image #" . ($key + 1) . ".";
-                }
-            } elseif ($_FILES['images']['error'][$key] !== UPLOAD_ERR_NO_FILE) {
-                $errors[] = "Error uploading additional image #" . ($key + 1) . ".";
-            }
-        }
-    }
+                  $imgName = uniqid('img_', true) . '_' . time() . '_' . $key . '.' . $fileExtension;
+                  $uploadPath = $uploadDir . $imgName;
 
-    if (empty($errors)) {
-        ob_end_clean();
-        redirect('products.php');
+                  if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $uploadPath)) {
+                      $imgStmt = $conn->prepare("INSERT INTO product_images (product_id, filename) VALUES (?, ?)");
+                      $imgStmt->bind_param("is", $product_id, $imgName);
+                      if (!$imgStmt->execute()) {
+                          throw new Exception("Failed to insert product image: " . $imgStmt->error);
+                      }
+                      $imgStmt->close();
+                      $uploadedCount++;
+                  } else {
+                      throw new Exception("Failed to upload additional image #" . ($key + 1) . ".");
+                  }
+              } elseif ($_FILES['images']['error'][$key] !== UPLOAD_ERR_NO_FILE) {
+                  throw new Exception("Error uploading additional image #" . ($key + 1) . ".");
+              }
+          }
+      }
+
+      $conn->commit();
+      ob_end_clean();
+      redirect('products.php');
+    } catch (Exception $e) {
+      $conn->rollback();
+      $errors[] = $e->getMessage();
     }
   }
 }
@@ -467,7 +475,6 @@ $brands = $conn->query("SELECT * FROM brands WHERE active=1");
     border-color: var(--primary-green);
 }
 
-/* Only show invalid styling when field has been validated */
 .form-control.is-invalid,
 .form-select.is-invalid {
     border-color: #dc3545;
@@ -494,40 +501,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
     let formSubmitted = false;
     
-    // Track if form has been submitted
     form.addEventListener('submit', function(e) {
         formSubmitted = true;
     });
     
-    // Set custom validation messages
     inputs.forEach(input => {
         input.addEventListener('invalid', function(e) {
             e.preventDefault();
-            // Only show error if form has been submitted
             if (formSubmitted) {
                 showFieldError(this);
             }
         });
         
         input.addEventListener('input', function() {
-            // Clear error when user starts typing
             if (this.validity.valid) {
                 clearFieldError(this);
             } else if (formSubmitted) {
-                // Only show error if form was already submitted
                 showFieldError(this);
             }
         });
         
         input.addEventListener('blur', function() {
-            // Only validate on blur if form has been submitted
             if (formSubmitted && !this.validity.valid) {
                 showFieldError(this);
             }
         });
     });
     
-    // Custom validation for form submission
     form.addEventListener('submit', function(e) {
         formSubmitted = true;
         let isValid = true;
@@ -543,7 +543,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Validate price
         const priceInput = form.querySelector('input[name="price"]');
         if (priceInput && priceInput.value) {
             const price = parseFloat(priceInput.value);
@@ -554,7 +553,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Validate stock
         const stockInput = form.querySelector('input[name="stock"]');
         if (stockInput && stockInput.value !== '') {
             const stock = parseInt(stockInput.value);
@@ -659,7 +657,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function showAlert(message) {
-        // Remove existing alert if any
         const existingAlert = document.querySelector('.validation-alert');
         if (existingAlert) {
             existingAlert.remove();
@@ -676,7 +673,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const formCard = form.closest('.card');
         formCard.insertBefore(alertDiv, formCard.querySelector('.card-body'));
         
-        // Auto scroll to alert
         alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 });

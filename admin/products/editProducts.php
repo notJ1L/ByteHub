@@ -35,77 +35,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = $_POST['description'];
     $specs = $_POST['specifications'];
 
-    $stmt = $conn->prepare("
-        UPDATE products SET
-            product_name = ?,
-            model = ?,
-            price = ?,
-            stock = ?,
-            featured = ?,
-            new_arrival = ?,
-            active = ?,
-            category_id = ?,
-            brand_id = ?,
-            description = ?,
-            specifications = ?
-        WHERE product_id = ?
-    ");
-    $stmt->bind_param("ssdiiiiisssi", $name, $model, $price, $stock, $featured, $new_arrival, $active, $category_id, $brand_id, $description, $specs, $product_id);
-    $stmt->execute();
+    $conn->begin_transaction();
 
-    $uploadDir = "../../uploads/products/";
-    if (!file_exists($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
+    try {
+      $stmt = $conn->prepare("
+          UPDATE products SET
+              product_name = ?,
+              model = ?,
+              price = ?,
+              stock = ?,
+              featured = ?,
+              new_arrival = ?,
+              active = ?,
+              category_id = ?,
+              brand_id = ?,
+              description = ?,
+              specifications = ?
+          WHERE product_id = ?
+      ");
+      $stmt->bind_param("ssdiiiiisssi", $name, $model, $price, $stock, $featured, $new_arrival, $active, $category_id, $brand_id, $description, $specs, $product_id);
+      
+      if (!$stmt->execute()) {
+        throw new Exception("Failed to update product: " . $stmt->error);
+      }
+      $stmt->close();
+
+      $uploadDir = "../../uploads/products/";
+      if (!file_exists($uploadDir)) {
+          mkdir($uploadDir, 0755, true);
+      }
+
+      $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      $maxFileSize = 5 * 1024 * 1024;
+
+      if (!empty($_FILES['image']['name']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+          $fileType = mime_content_type($_FILES['image']['tmp_name']);
+          if (in_array($fileType, $allowedTypes) && $_FILES['image']['size'] <= $maxFileSize) {
+              $fileExtension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+              $mainImage = uniqid('main_', true) . '_' . time() . '.' . $fileExtension;
+              $target = $uploadDir . $mainImage;
+
+              if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
+                  $updateStmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
+                  $updateStmt->bind_param("si", $mainImage, $product_id);
+                  if (!$updateStmt->execute()) {
+                      throw new Exception("Failed to update product image: " . $updateStmt->error);
+                  }
+                  $updateStmt->close();
+              }
+          }
+      }
+
+      if (!empty($_FILES['images']['name'][0])) {
+          foreach ($_FILES['images']['name'] as $key => $filename) {
+              if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
+                  $fileType = mime_content_type($_FILES['images']['tmp_name'][$key]);
+                  if (!in_array($fileType, $allowedTypes)) {
+                      continue;
+                  }
+                  
+                  if ($_FILES['images']['size'][$key] > $maxFileSize) {
+                      continue;
+                  }
+
+                  $fileExtension = pathinfo($filename, PATHINFO_EXTENSION);
+                  $imgName = uniqid('img_', true) . '_' . time() . '_' . $key . '.' . $fileExtension;
+                  $uploadPath = $uploadDir . $imgName;
+
+                  if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $uploadPath)) {
+                      $imgStmt = $conn->prepare("INSERT INTO product_images (product_id, filename) VALUES (?, ?)");
+                      $imgStmt->bind_param("is", $product_id, $imgName);
+                      if (!$imgStmt->execute()) {
+                          throw new Exception("Failed to insert product image: " . $imgStmt->error);
+                      }
+                      $imgStmt->close();
+                  }
+              }
+          }
+      }
+
+      $conn->commit();
+      ob_end_clean();
+      redirect("products.php");
+      exit;
+    } catch (Exception $e) {
+      $conn->rollback();
+      ob_end_clean();
+      redirect("products.php?error=" . urlencode($e->getMessage()));
+      exit;
     }
-
-    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    $maxFileSize = 5 * 1024 * 1024;
-
-    if (!empty($_FILES['image']['name']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $fileType = mime_content_type($_FILES['image']['tmp_name']);
-        if (in_array($fileType, $allowedTypes) && $_FILES['image']['size'] <= $maxFileSize) {
-            $fileExtension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $mainImage = uniqid('main_', true) . '_' . time() . '.' . $fileExtension;
-            $target = $uploadDir . $mainImage;
-
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
-                $updateStmt = $conn->prepare("UPDATE products SET image=? WHERE product_id=?");
-                $updateStmt->bind_param("si", $mainImage, $product_id);
-                $updateStmt->execute();
-                $updateStmt->close();
-            }
-        }
-    }
-
-    if (!empty($_FILES['images']['name'][0])) {
-        foreach ($_FILES['images']['name'] as $key => $filename) {
-            if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
-                $fileType = mime_content_type($_FILES['images']['tmp_name'][$key]);
-                if (!in_array($fileType, $allowedTypes)) {
-                    continue;
-                }
-                
-                if ($_FILES['images']['size'][$key] > $maxFileSize) {
-                    continue;
-                }
-
-                $fileExtension = pathinfo($filename, PATHINFO_EXTENSION);
-                $imgName = uniqid('img_', true) . '_' . time() . '_' . $key . '.' . $fileExtension;
-                $uploadPath = $uploadDir . $imgName;
-
-                if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $uploadPath)) {
-                    $imgStmt = $conn->prepare("INSERT INTO product_images (product_id, filename) VALUES (?, ?)");
-                    $imgStmt->bind_param("is", $product_id, $imgName);
-                    $imgStmt->execute();
-                    $imgStmt->close();
-                }
-            }
-        }
-    }
-
-    ob_end_clean();
-    redirect("products.php");
-    exit;
 }
 
 $cats = $conn->query("SELECT * FROM categories WHERE active=1");

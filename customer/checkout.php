@@ -20,41 +20,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $payment_method = $_POST['payment_method'];
   $order_code = 'ORDER-' . rand(1000, 9999);
 
-  $ids = implode(',', array_map('intval', array_keys($_SESSION['cart'])));
-  $sql = "SELECT * FROM products WHERE product_id IN ($ids)";
-  $result = $conn->query($sql);
+  // Begin transaction
+  $conn->begin_transaction();
 
-  if (!$result) {
-    die("Query failed: " . $conn->error);
-  }
+  try {
+    $ids = implode(',', array_map('intval', array_keys($_SESSION['cart'])));
+    $sql = "SELECT * FROM products WHERE product_id IN ($ids)";
+    $result = $conn->query($sql);
 
-  $subtotal = 0;
-  while ($row = $result->fetch_assoc()) {
-    $subtotal += $row['price'] * $_SESSION['cart'][$row['product_id']];
-  }
-  $tax = round($subtotal * 0.12, 2);
-  $total = round($subtotal + $tax, 2);
+    if (!$result) {
+      throw new Exception("Query failed: " . $conn->error);
+    }
 
-  $stmt = $conn->prepare("INSERT INTO orders (user_id, order_code, payment_method, subtotal, tax, total, status) 
-                          VALUES (?, ?, ?, ?, ?, ?, 'Pending')");
-  $stmt->bind_param('issddd', $user_id, $order_code, $payment_method, $subtotal, $tax, $total);
-  $stmt->execute();
-  $order_id = $stmt->insert_id;
-  $stmt->close();
-  $result->data_seek(0);
-  while ($row = $result->fetch_assoc()) {
-    $pid = (int)$row['product_id'];
-    $qty = (int)$_SESSION['cart'][$pid];
-    $line_total = $row['price'] * $qty;
+    $subtotal = 0;
+    while ($row = $result->fetch_assoc()) {
+      $subtotal += $row['price'] * $_SESSION['cart'][$row['product_id']];
+    }
+    $tax = round($subtotal * 0.12, 2);
+    $total = round($subtotal + $tax, 2);
 
-    $stmt = $conn->prepare("INSERT INTO order_items 
-      (name_snapshot, unit_price_snapshot, quantity, line_total, order_id, product_id)
-      VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param('sdddid', $row['product_name'], $row['price'], $qty, $line_total, $order_id, $pid);
-    $stmt->execute();
+    $stmt = $conn->prepare("INSERT INTO orders (user_id, order_code, payment_method, subtotal, tax, total, status) 
+                            VALUES (?, ?, ?, ?, ?, ?, 'Pending')");
+    $stmt->bind_param('issddd', $user_id, $order_code, $payment_method, $subtotal, $tax, $total);
+    
+    if (!$stmt->execute()) {
+      throw new Exception("Failed to insert order: " . $stmt->error);
+    }
+    
+    $order_id = $stmt->insert_id;
     $stmt->close();
+    $result->data_seek(0);
+    
+    while ($row = $result->fetch_assoc()) {
+      $pid = (int)$row['product_id'];
+      $qty = (int)$_SESSION['cart'][$pid];
+      $line_total = $row['price'] * $qty;
 
-    $conn->query("UPDATE products SET stock = stock - $qty WHERE product_id = $pid");
+      $stmt = $conn->prepare("INSERT INTO order_items 
+        (name_snapshot, unit_price_snapshot, quantity, line_total, order_id, product_id)
+        VALUES (?, ?, ?, ?, ?, ?)");
+      $stmt->bind_param('sdddid', $row['product_name'], $row['price'], $qty, $line_total, $order_id, $pid);
+      
+      if (!$stmt->execute()) {
+        throw new Exception("Failed to insert order item: " . $stmt->error);
+      }
+      
+      $stmt->close();
+
+      $updateResult = $conn->query("UPDATE products SET stock = stock - $qty WHERE product_id = $pid");
+      if (!$updateResult) {
+        throw new Exception("Failed to update product stock: " . $conn->error);
+      }
+    }
+
+    // Commit transaction if all operations succeeded
+    $conn->commit();
+  } catch (Exception $e) {
+    // Rollback transaction on error
+    $conn->rollback();
+    die("Transaction failed: " . $e->getMessage());
   }
 
   try {

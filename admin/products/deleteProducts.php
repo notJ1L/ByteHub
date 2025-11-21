@@ -16,39 +16,52 @@ if (!$id) {
     redirect("products.php?error=invalid_id");
 }
 
-$stmt = $conn->prepare("SELECT image FROM products WHERE product_id = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
-$result = $stmt->get_result();
-$product = $result->fetch_assoc();
+$conn->begin_transaction();
 
-if ($product && !empty($product['image'])) {
-    $imagePath = "../../uploads/products/" . $product['image'];
-    if (file_exists($imagePath)) {
-        unlink($imagePath);
-    }
+try {
+  $stmt = $conn->prepare("SELECT image FROM products WHERE product_id = ?");
+  $stmt->bind_param("i", $id);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $product = $result->fetch_assoc();
+
+  if ($product && !empty($product['image'])) {
+      $imagePath = "../../uploads/products/" . $product['image'];
+      if (file_exists($imagePath)) {
+          unlink($imagePath);
+      }
+  }
+
+  $stmt = $conn->prepare("SELECT filename FROM product_images WHERE product_id = ?");
+  $stmt->bind_param("i", $id);
+  $stmt->execute();
+  $imagesResult = $stmt->get_result();
+
+  while ($img = $imagesResult->fetch_assoc()) {
+      $imgPath = "../../uploads/products/" . $img['filename'];
+      if (file_exists($imgPath)) {
+          unlink($imgPath);
+      }
+  }
+
+  $stmt = $conn->prepare("DELETE FROM product_images WHERE product_id = ?");
+  $stmt->bind_param("i", $id);
+  if (!$stmt->execute()) {
+      throw new Exception("Failed to delete product images: " . $stmt->error);
+  }
+
+  $stmt = $conn->prepare("DELETE FROM products WHERE product_id = ?");
+  $stmt->bind_param("i", $id);
+  if (!$stmt->execute()) {
+      throw new Exception("Failed to delete product: " . $stmt->error);
+  }
+
+  $conn->commit();
+  ob_end_clean();
+  redirect("products.php?deleted=1");
+} catch (Exception $e) {
+  $conn->rollback();
+  ob_end_clean();
+  redirect("products.php?error=" . urlencode($e->getMessage()));
 }
-
-$stmt = $conn->prepare("SELECT filename FROM product_images WHERE product_id = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
-$imagesResult = $stmt->get_result();
-
-while ($img = $imagesResult->fetch_assoc()) {
-    $imgPath = "../../uploads/products/" . $img['filename'];
-    if (file_exists($imgPath)) {
-        unlink($imgPath);
-    }
-}
-
-$stmt = $conn->prepare("DELETE FROM product_images WHERE product_id = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
-
-$stmt = $conn->prepare("DELETE FROM products WHERE product_id = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
-
-ob_end_clean();
-redirect("products.php?deleted=1");
 ?>
